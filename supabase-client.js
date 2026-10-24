@@ -124,7 +124,7 @@ const SupabaseBridge = {
   },
 
   /**
-   * Record interactions (likes, bookmarks, comments)
+   * Record interactions (likes, bookmarks, comments, replies)
    */
   async recordInteraction(postId, type, data) {
     const posts = (await this.getPosts()) || [];
@@ -150,10 +150,48 @@ const SupabaseBridge = {
         }
       } else if (type === 'comment' && data) {
         if (!target.comments) target.comments = [];
-        target.comments.push({ author: 'Ihtisham Naeem', text: data });
+        target.comments.push(data);
+        if (this.config.isConnected) {
+          try {
+            await fetch(`${this.config.url}/rest/v1/posts?id=eq.${postId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': this.config.anonKey,
+                'Authorization': `Bearer ${this.config.anonKey}`
+              },
+              body: JSON.stringify({ comments: target.comments })
+            });
+          } catch (e) {
+            console.warn('Sync comment to Supabase failed', e);
+          }
+        }
+      } else if (type === 'reply' && data) {
+        if (!target.comments) target.comments = [];
+        const comment = target.comments.find(c => c.id === data.commentId);
+        if (comment) {
+          if (!comment.replies) comment.replies = [];
+          comment.replies.push(data.reply);
+        }
+        if (this.config.isConnected) {
+          try {
+            await fetch(`${this.config.url}/rest/v1/posts?id=eq.${postId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': this.config.anonKey,
+                'Authorization': `Bearer ${this.config.anonKey}`
+              },
+              body: JSON.stringify({ comments: target.comments })
+            });
+          } catch (e) {
+            console.warn('Sync reply to Supabase failed', e);
+          }
+        }
       }
 
       localStorage.setItem(this.STORAGE_KEY_LOCAL_POSTS, JSON.stringify(posts));
     }
   }
 };
+

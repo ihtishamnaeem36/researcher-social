@@ -17,8 +17,27 @@ const SEED_PAPERS = [
     bookmarked: false,
     liked: false,
     comments: [
-      { author: 'Dr. Sarah Lin (Stanford)', text: 'The nucleic acid co-folding resolution is where this really outclasses AF2.' },
-      { author: 'Elena Rostova', text: 'Does anyone have benchmarks on disordered loop segments?' }
+      {
+        id: 'c-1',
+        author: 'Dr. Sarah Lin (Stanford)',
+        text: 'The nucleic acid co-folding resolution is where this really outclasses AF2.',
+        time: '2h ago',
+        replies: [
+          {
+            id: 'r-1',
+            author: 'Elena Rostova',
+            text: 'Agreed, especially with modified RNA nucleotides and non-canonical base pairs.',
+            time: '1h ago'
+          }
+        ]
+      },
+      {
+        id: 'c-2',
+        author: 'Marcus V. (Oxford)',
+        text: 'Does anyone have benchmarks on disordered loop segments?',
+        time: '3h ago',
+        replies: []
+      }
     ],
     slides: [
       {
@@ -356,13 +375,9 @@ function renderPostCard(post) {
   }).join('');
 
   const dotsHTML = post.slides.map((_, i) => `<span class="dot ${i === 0 ? 'active' : ''}" data-dot="${i}"></span>`).join('');
+  const totalDiscussions = countTotalDiscussions(post);
 
-  const commentsHTML = (post.comments || []).map(c => `
-    <div class="comment-item">
-      <span class="comment-author">${c.author}</span>
-      <span class="comment-text">${c.text}</span>
-    </div>
-  `).join('');
+  const commentsHTML = (post.comments || []).map(c => renderCommentThread(c, post.id)).join('');
 
   return `
     <article class="post-card-wrapper" id="post-${post.id}">
@@ -400,11 +415,11 @@ function renderPostCard(post) {
             <span class="like-count">${post.likes || 0}</span>
           </button>
 
-          <button class="action-btn" onclick="toggleCommentsDrawer('${post.id}')" title="Scholarly peer discussion">
+          <button class="action-btn" onclick="toggleCommentsDrawer('${post.id}')" title="Scholarly peer discussion & replies">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
-            <span>${(post.comments || []).length} Discuss</span>
+            <span class="discuss-count">${totalDiscussions} Discuss</span>
           </button>
         </div>
 
@@ -569,6 +584,164 @@ function toggleCommentsDrawer(postId) {
   }
 }
 
+function escapeHTML(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Recursively count all top-level comments and nested replies
+ */
+function countTotalDiscussions(post) {
+  if (!post || !post.comments || !Array.isArray(post.comments)) return 0;
+  let total = 0;
+  function countComment(c) {
+    if (!c) return;
+    total++;
+    if (c.replies && Array.isArray(c.replies)) {
+      c.replies.forEach(countComment);
+    }
+  }
+  post.comments.forEach(countComment);
+  return total;
+}
+
+/**
+ * Render a single threaded peer critique and its nested replies
+ */
+function renderCommentThread(c, postId) {
+  if (!c) return '';
+  const commentId = c.id || ('c-' + Math.random().toString(36).substring(2, 9));
+  c.id = commentId; // persist id in object
+  const author = c.author || 'Anonymous Scholar';
+  const time = c.time || 'Recently';
+  const text = c.text || '';
+  const replies = Array.isArray(c.replies) ? c.replies : [];
+
+  const repliesHTML = replies.map(r => {
+    const rAuthor = r.author || 'Anonymous Scholar';
+    const rTime = r.time || 'Recently';
+    const rText = r.text || '';
+    return `
+      <div class="reply-item">
+        <div class="comment-header">
+          <span class="comment-author">${escapeHTML(rAuthor)}</span>
+          <span class="comment-time">${escapeHTML(rTime)}</span>
+        </div>
+        <div class="comment-text">${escapeHTML(rText)}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="comment-thread" id="thread-${postId}-${commentId}">
+      <div class="comment-item">
+        <div class="comment-header">
+          <span class="comment-author">${escapeHTML(author)}</span>
+          <span class="comment-time">${escapeHTML(time)}</span>
+        </div>
+        <div class="comment-text">${escapeHTML(text)}</div>
+        <div class="comment-actions">
+          <button class="reply-btn" onclick="toggleReplyBox('${postId}', '${commentId}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 17 4 12 9 7"></polyline>
+              <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+            </svg>
+            Reply
+          </button>
+        </div>
+        <div class="reply-input-box" id="reply-box-${postId}-${commentId}" style="display: none;">
+          <input type="text" id="reply-input-${postId}-${commentId}" placeholder="Reply to ${escapeHTML(author)}..." onkeydown="if(event.key==='Enter') submitReply('${postId}', '${commentId}')">
+          <button class="btn btn-primary btn-sm" onclick="submitReply('${postId}', '${commentId}')">Reply</button>
+        </div>
+      </div>
+      ${repliesHTML.length > 0 ? `<div class="comment-replies-list" id="replies-${postId}-${commentId}">${repliesHTML}</div>` : `<div class="comment-replies-list" id="replies-${postId}-${commentId}" style="display:none;"></div>`}
+    </div>
+  `;
+}
+
+/**
+ * Toggle inline reply input box for a specific comment
+ */
+function toggleReplyBox(postId, commentId) {
+  const box = document.getElementById(`reply-box-${postId}-${commentId}`);
+  if (!box) return;
+  const isHidden = box.style.display === 'none';
+  box.style.display = isHidden ? 'flex' : 'none';
+  if (isHidden) {
+    const input = document.getElementById(`reply-input-${postId}-${commentId}`);
+    setTimeout(() => input?.focus(), 80);
+  }
+}
+
+/**
+ * Submit a nested peer reply to an existing comment
+ */
+function submitReply(postId, commentId) {
+  const input = document.getElementById(`reply-input-${postId}-${commentId}`);
+  if (!input || !input.value.trim()) return;
+
+  const text = input.value.trim();
+  const post = state.posts.find(p => p.id === postId);
+  if (!post || !post.comments) return;
+
+  const targetComment = post.comments.find(c => c.id === commentId);
+  if (!targetComment) return;
+
+  if (!targetComment.replies) targetComment.replies = [];
+  const newReply = {
+    id: 'r-' + Date.now(),
+    author: 'Ihtisham Naeem',
+    text: text,
+    time: 'Just now'
+  };
+  targetComment.replies.push(newReply);
+
+  input.value = '';
+  toggleReplyBox(postId, commentId);
+
+  // Sync to Supabase & LocalStorage
+  SupabaseBridge.recordInteraction(postId, 'reply', { commentId, reply: newReply });
+
+  // Update UI instantly
+  refreshCommentsView(postId);
+}
+
+/**
+ * Refresh comments list and total discussion count on the card
+ */
+function refreshCommentsView(postId) {
+  const post = state.posts.find(p => p.id === postId);
+  if (!post) return;
+
+  const drawer = document.getElementById(`comments-${postId}`);
+  if (drawer) {
+    const list = drawer.querySelector('.comments-list');
+    if (list) {
+      const commentsHTML = (post.comments || []).map(c => renderCommentThread(c, post.id)).join('');
+      list.innerHTML = commentsHTML.length > 0 
+        ? commentsHTML 
+        : '<span style="color:var(--text-muted);font-size:0.82rem;">No critiques yet. Initiate the academic discussion.</span>';
+    }
+  }
+
+  const card = document.getElementById(`post-${postId}`);
+  if (card) {
+    const countEl = card.querySelector('.discuss-count');
+    if (countEl) {
+      countEl.textContent = `${countTotalDiscussions(post)} Discuss`;
+    }
+  }
+}
+
+/**
+ * Submit top-level comment / critique
+ */
 function submitComment(postId) {
   const input = document.getElementById(`comment-input-${postId}`);
   if (!input || !input.value.trim()) return;
@@ -578,37 +751,24 @@ function submitComment(postId) {
   if (!post) return;
 
   if (!post.comments) post.comments = [];
-  post.comments.push({
+  const newComment = {
+    id: 'c-' + Date.now(),
     author: 'Ihtisham Naeem',
-    text: text
-  });
+    text: text,
+    time: 'Just now',
+    replies: []
+  };
+  post.comments.push(newComment);
 
   input.value = '';
-  SupabaseBridge.recordInteraction(postId, 'comment', text);
 
-  // Re-render comments list in this card
-  const drawer = document.getElementById(`comments-${postId}`);
-  if (drawer) {
-    const list = drawer.querySelector('.comments-list');
-    if (list) {
-      list.innerHTML = post.comments.map(c => `
-        <div class="comment-item">
-          <span class="comment-author">${c.author}</span>
-          <span class="comment-text">${c.text}</span>
-        </div>
-      `).join('');
-    }
-  }
+  // Sync to Supabase & LocalStorage
+  SupabaseBridge.recordInteraction(postId, 'comment', newComment);
 
-  // Update comment counter button
-  const card = document.getElementById(`post-${postId}`);
-  if (card) {
-    const discussBtn = card.querySelectorAll('.action-btn')[1];
-    if (discussBtn) {
-      discussBtn.querySelector('span').textContent = `${post.comments.length} Discuss`;
-    }
-  }
+  // Update UI instantly
+  refreshCommentsView(postId);
 }
+
 
 /**
  * Folio Studio & Live Card Generator Setup
