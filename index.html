@@ -1,132 +1,283 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Synapse — Research, Distilled & Visualized</title>
-  <meta name="description" content="A visual micro-publishing platform for researchers. Turn complex scientific papers into elegant, bite-sized carousels and deep-dive slides.">
+  <title>Noesis — The Scholarly Folio & Discovery Network</title>
+  <meta name="description" content="A visual intellectual discourse platform for scientists and researchers. Transform complex scientific literature into elegant, swipeable multi-slide Folios.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Top Navigation -->
-  <header class="app-header">
-    <div class="header-container">
-      <div class="brand">
-        <div class="logo-mark">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+  <!-- Full Screen Master Layout -->
+  <div class="app-layout">
+
+    <!-- Left Sidebar Menu -->
+    <aside class="sidebar-nav" id="sidebarNav">
+      <div class="sidebar-header">
+        <div class="brand" id="brandIdentity">
+          <div class="logo-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+              <path d="M2 12h20"></path>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title" id="platformBrandName">Noesis</span>
+            <span class="brand-badge">Scholarly Folios</span>
+          </div>
+        </div>
+        <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse Sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
-        </div>
-        <div class="brand-text">
-          <span class="brand-title">Synapse</span>
-          <span class="brand-badge">Research Social</span>
-        </div>
+        </button>
       </div>
 
-      <div class="search-bar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" id="searchInput" placeholder="Search papers, DOIs, authors, or topics...">
-      </div>
-
-      <div class="header-actions">
-        <button id="openNewPostBtn" class="btn btn-primary">
+      <!-- Action Button: Draft New Folio -->
+      <div class="sidebar-action-wrap">
+        <button id="openNewPostBtn" class="btn btn-primary btn-block">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          <span>Share Paper</span>
+          <span>Draft New Folio</span>
         </button>
-
-        <button id="openConfigBtn" class="btn btn-ghost" title="Supabase Database Settings">
-          <span class="db-status-dot connected" id="dbIndicator"></span>
-          <span>Cloud Sync</span>
-        </button>
-
-        <div class="user-avatar" title="Ihtisham Naeem (Active Profile)">
-          <span>IN</span>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main App Shell -->
-  <main class="app-shell">
-    <!-- Category & Topic Filter Bar -->
-    <section class="filter-strip">
-      <div class="topics-wrapper">
-        <button class="topic-pill active" data-topic="all">All Disciplines</button>
-        <button class="topic-pill" data-topic="AI & Machine Learning">⚡ AI & Machine Learning</button>
-        <button class="topic-pill" data-topic="Biotech & Genetics">🧬 Biotech & Genetics</button>
-        <button class="topic-pill" data-topic="Neuroscience">🧠 Neuroscience</button>
-        <button class="topic-pill" data-topic="Quantum & Physics">⚛️ Quantum & Physics</button>
-        <button class="topic-pill" data-topic="Medicine & Health">🩺 Medicine & Health</button>
-        <button class="topic-pill" data-topic="Climate Science">🌍 Climate Science</button>
       </div>
 
-      <div class="filter-toggles">
-        <button id="filterSavedOnly" class="filter-btn" title="View Bookmarked Papers">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <!-- Main Navigation Links -->
+      <nav class="sidebar-menu">
+        <button class="nav-item active" data-nav="feed" id="navFeedBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Dispatch Feed</span>
+        </button>
+
+        <button class="nav-item" data-nav="saved" id="navSavedBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
           </svg>
-          <span>Saved</span>
+          <span>Saved Folios</span>
+          <span class="nav-badge" id="savedCountBadge">0</span>
         </button>
-      </div>
-    </section>
 
-    <!-- Content Feed Grid -->
-    <section class="feed-container">
-      <div id="postsFeed" class="posts-feed">
-        <!-- Rendered dynamically by app.js -->
+        <button class="nav-item" data-nav="studio" id="navStudioBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <span>Folio Studio</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Section: Disciplines -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span>Disciplines</span>
+        </div>
+        <div class="sidebar-disciplines-list">
+          <button class="discipline-nav-item active" data-topic="all">
+            <span class="disc-dot"></span>
+            <span>All Disciplines</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="AI & Machine Learning">
+            <span class="disc-dot" style="background:#38bdf8;"></span>
+            <span>AI & Machine Learning</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Biotech & Genetics">
+            <span class="disc-dot" style="background:#34d399;"></span>
+            <span>Biotech & Genetics</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Neuroscience">
+            <span class="disc-dot" style="background:#a78bfa;"></span>
+            <span>Neuroscience</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Quantum & Physics">
+            <span class="disc-dot" style="background:#fbbf24;"></span>
+            <span>Quantum & Physics</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Medicine & Health">
+            <span class="disc-dot" style="background:#f43f5e;"></span>
+            <span>Medicine & Health</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Climate Science">
+            <span class="disc-dot" style="background:#10b981;"></span>
+            <span>Climate Science</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Feed Empty State -->
-      <div id="emptyFeedState" class="empty-state" style="display: none;">
-        <div class="empty-icon">📚</div>
-        <h3>No papers found in this category</h3>
-        <p>Try switching categories or share the first paper to start this channel.</p>
-        <button class="btn btn-primary" onclick="document.getElementById('openNewPostBtn').click()">Create First Post</button>
-      </div>
-    </section>
-  </main>
+      <!-- Sidebar Footer Controls -->
+      <div class="sidebar-footer">
+        <!-- Dark / Light Theme Toggle -->
+        <button class="theme-toggle-row" id="themeToggleBtn" title="Switch Theme">
+          <div class="theme-pill">
+            <span class="theme-mode-icon" id="themeIcon">🌙</span>
+            <span class="theme-label" id="themeLabel">Dark Mode</span>
+          </div>
+          <span class="theme-switch-indicator"></span>
+        </button>
 
-  <!-- Create Paper Post Modal -->
+        <!-- Cloud Sync (Supabase) -->
+        <button class="sidebar-util-btn" id="openConfigBtn" title="Supabase Database Settings">
+          <span class="db-status-dot connected" id="dbIndicator"></span>
+          <span class="util-text">Cloud Sync (Supabase)</span>
+        </button>
+
+        <!-- User / Scholar Profile Badge -->
+        <div class="sidebar-profile">
+          <div class="user-avatar" title="Ihtisham Naeem (Active Profile)">
+            <span>IN</span>
+          </div>
+          <div class="profile-details">
+            <span class="profile-name">Ihtisham Naeem</span>
+            <span class="profile-caption">Scholar · Active</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Fluid Viewport -->
+    <div class="main-viewport">
+      <!-- Top Contextual Bar -->
+      <header class="app-topbar">
+        <div class="topbar-left">
+          <button class="mobile-toggle-btn" id="mobileMenuToggle" aria-label="Open Navigation">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+
+          <div class="search-bar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search research, DOIs, authors, or concepts...">
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="view-indicator">
+            <span class="live-pulse"></span>
+            <span class="view-text" id="currentViewText">Dispatch: All Fields</span>
+          </div>
+
+          <button class="btn btn-outline btn-sm" id="topDraftFolioBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>Draft Folio</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Fluid Main Scroll Area -->
+      <main class="app-fluid-content">
+        <!-- Horizontal Discipline Filter Strip -->
+        <section class="filter-strip">
+          <div class="topics-wrapper">
+            <button class="topic-pill active" data-topic="all">All Disciplines</button>
+            <button class="topic-pill" data-topic="AI & Machine Learning">⚡ AI & Machine Learning</button>
+            <button class="topic-pill" data-topic="Biotech & Genetics">🧬 Biotech & Genetics</button>
+            <button class="topic-pill" data-topic="Neuroscience">🧠 Neuroscience</button>
+            <button class="topic-pill" data-topic="Quantum & Physics">⚛️ Quantum & Physics</button>
+            <button class="topic-pill" data-topic="Medicine & Health">🩺 Medicine & Health</button>
+            <button class="topic-pill" data-topic="Climate Science">🌍 Climate Science</button>
+          </div>
+
+          <div class="filter-toggles">
+            <button id="filterSavedOnly" class="filter-btn" title="View Saved Folios">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Saved</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Feed Container (Spacious Full-Width Responsive) -->
+        <section class="feed-container">
+          <div id="postsFeed" class="posts-feed">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+
+          <!-- Empty Feed State -->
+          <div id="emptyFeedState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📜</div>
+            <h3>No Folios in this discipline yet</h3>
+            <p>Be the first scholar to synthesize an empirical paper or hypothesis in this field.</p>
+            <button class="btn btn-primary" onclick="document.getElementById('openNewPostBtn').click()">Draft First Folio</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Create Folio Studio Modal -->
   <div id="createPostModal" class="modal-overlay" style="display: none;">
     <div class="modal-card wide">
       <div class="modal-header">
         <div>
-          <h2>Create Paper Carousel</h2>
-          <p class="modal-subtitle">Transform any research paper into an aesthetic, swipeable multi-slide post.</p>
+          <h2>Folio Studio</h2>
+          <p class="modal-subtitle">Synthesize complex scientific discoveries into a publication-grade multi-slide Folio.</p>
         </div>
         <button class="close-modal" id="closeCreatePostBtn">&times;</button>
+      </div>
+
+      <!-- Archetype / Structure Template Selector -->
+      <div class="template-selector-bar">
+        <span class="template-label">Select Folio Archetype:</span>
+        <div class="template-chips">
+          <button type="button" class="template-chip active" data-template="empirical">
+            <span class="chip-icon">🔬</span>
+            <span>Empirical Breakthrough</span>
+          </button>
+          <button type="button" class="template-chip" data-template="method">
+            <span class="chip-icon">⚙️</span>
+            <span>System & Architecture</span>
+          </button>
+          <button type="button" class="template-chip" data-template="hypothesis">
+            <span class="chip-icon">💡</span>
+            <span>Theoretical Thesis</span>
+          </button>
+          <button type="button" class="template-chip" data-template="review">
+            <span class="chip-icon">📚</span>
+            <span>Synthesis & Disputation</span>
+          </button>
+        </div>
       </div>
 
       <div class="creator-layout">
         <!-- Left Column: Input Form -->
         <div class="creator-form-panel">
           <div class="quick-autofill-banner">
-            <span>Want a quick demo?</span>
-            <button id="autofillDemoBtn" type="button" class="btn btn-xs btn-outline">Load Sample Breakthrough Paper</button>
+            <span>Need sample data?</span>
+            <button id="autofillDemoBtn" type="button" class="btn btn-xs btn-outline">Load LK-99 Superconductivity Dissection</button>
           </div>
 
           <form id="paperForm">
             <div class="form-group">
-              <label for="postTitle">Paper Title *</label>
+              <label for="postTitle" id="lblTitle">Paper / Treatise Title *</label>
               <input type="text" id="postTitle" required placeholder="e.g. Accurate structure prediction of biomolecular interactions with AlphaFold 3">
             </div>
 
             <div class="form-row">
               <div class="form-group flex-1">
-                <label for="postAuthors">Key Authors / Lab</label>
-                <input type="text" id="postAuthors" placeholder="e.g. Abramson, Adler, Dunger et al. (Google DeepMind)">
+                <label for="postAuthors">Key Authors & Affiliation</label>
+                <input type="text" id="postAuthors" placeholder="e.g. Abramson, Adler et al. (DeepMind / Isomorphic Labs)">
               </div>
               <div class="form-group flex-1">
-                <label for="postField">Discipline / Tag *</label>
+                <label for="postField">Discipline *</label>
                 <select id="postField" required>
                   <option value="AI & Machine Learning">AI & Machine Learning</option>
                   <option value="Biotech & Genetics">Biotech & Genetics</option>
@@ -139,45 +290,45 @@
             </div>
 
             <div class="form-group">
-              <label for="postDoi">DOI, arXiv, or Paper Link</label>
+              <label for="postDoi">DOI, arXiv, or Repository Link</label>
               <input type="url" id="postDoi" placeholder="https://doi.org/... or https://arxiv.org/abs/...">
             </div>
 
             <div class="form-divider">
-              <span>Slide 1: Front Visual Hook (The TL;DR)</span>
+              <span id="lblSlide1Header">Slide 1: Front Visual Hook (The Core Claim)</span>
             </div>
 
             <div class="form-group">
-              <label for="postHook">The 1-Sentence Breakthrough Claim *</label>
+              <label for="postHook" id="lblSlide1Label">The 1-Sentence Breakthrough Claim *</label>
               <textarea id="postHook" rows="2" required placeholder="What did this paper discover or build in plain, punchy academic language?"></textarea>
             </div>
 
             <div class="form-divider">
-              <span>Deep-Dive Slides (Revealed on Swipe / Scroll)</span>
+              <span>Deep-Dive Slides (Revealed on Swipe / Slide)</span>
             </div>
 
             <div class="form-group">
-              <label for="postMethod">Slide 2: Core Methodology & Approach</label>
+              <label for="postMethod" id="lblSlide2Label">Slide 2: Methodology & Experimental Framework</label>
               <textarea id="postMethod" rows="3" placeholder="How did they test or achieve this? Architecture, dataset size, experimental setup..."></textarea>
             </div>
 
             <div class="form-group">
-              <label for="postResults">Slide 3: Key Data & Findings</label>
+              <label for="postResults" id="lblSlide3Label">Slide 3: Quantitative Findings & Benchmarks</label>
               <textarea id="postResults" rows="3" placeholder="Concrete numbers, accuracy improvements, statistical significance, or benchmark wins..."></textarea>
             </div>
 
             <div class="form-group">
-              <label for="postCritique">Slide 4: Critical Takeaway & Limitations</label>
-              <textarea id="postCritique" rows="2" placeholder="Where does it fail? What questions remain for future researchers?"></textarea>
+              <label for="postCritique" id="lblSlide4Label">Slide 4: Critical Frontier & Open Questions</label>
+              <textarea id="postCritique" rows="2" placeholder="Where does it fall short? What remains unresolved for future scholars?"></textarea>
             </div>
 
             <div class="form-group">
-              <label>Select Card Aesthetic Theme</label>
+              <label>Select Card Aesthetic</label>
               <div class="theme-selector">
-                <button type="button" class="theme-chip active" data-theme="obsidian">Obsidian</button>
-                <button type="button" class="theme-chip" data-theme="editorial">Swiss White</button>
-                <button type="button" class="theme-chip" data-theme="deepblue">Deep Cosmic</button>
-                <button type="button" class="theme-chip" data-theme="emerald">Sage Lab</button>
+                <button type="button" class="theme-chip active" data-theme="obsidian">Obsidian Slate</button>
+                <button type="button" class="theme-chip" data-theme="editorial">Swiss Monograph</button>
+                <button type="button" class="theme-chip" data-theme="deepblue">Cosmic Cobalt</button>
+                <button type="button" class="theme-chip" data-theme="emerald">Sage Biosphere</button>
                 <button type="button" class="theme-chip" data-theme="sunset">Warm Ochre</button>
               </div>
             </div>
@@ -187,17 +338,17 @@
         <!-- Right Column: Live Card Preview -->
         <div class="creator-preview-panel">
           <div class="preview-header">
-            <span>Live Card Preview</span>
+            <span>Live Folio Slide Preview</span>
             <div class="preview-slide-indicator">
-              <button class="preview-nav-btn" id="prevPreviewSlide">&larr;</button>
+              <button class="preview-nav-btn" id="prevPreviewSlide" type="button">&larr;</button>
               <span id="previewSlideCounter">Slide 1 of 4</span>
-              <button class="preview-nav-btn" id="nextPreviewSlide">&rarr;</button>
+              <button class="preview-nav-btn" id="nextPreviewSlide" type="button">&rarr;</button>
             </div>
           </div>
 
           <div class="card-stage">
             <div id="liveCardRender" class="live-card theme-obsidian">
-              <!-- Rendered via JS -->
+              <!-- Rendered dynamically -->
             </div>
           </div>
 
@@ -208,16 +359,16 @@
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-              <span>Export Card as PNG</span>
+              <span>Export Slide as PNG</span>
             </button>
-            <span class="preview-note">Swipeable carousel cards render in 4:5 vertical format for Instagram / X / Mobile.</span>
+            <span class="preview-note">Swipeable 4:5 cards optimized for horizontal reading and high-res export.</span>
           </div>
         </div>
       </div>
 
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" id="cancelPostBtn">Cancel</button>
-        <button type="button" class="btn btn-primary" id="publishPostBtn">Publish to Feed</button>
+        <button type="button" class="btn btn-primary" id="publishPostBtn">Publish Folio to Dispatch</button>
       </div>
     </div>
   </div>
@@ -227,8 +378,8 @@
     <div class="modal-card">
       <div class="modal-header">
         <div>
-          <h2>Cloud Database & Auth (Supabase)</h2>
-          <p class="modal-subtitle">Connect your free Supabase project to enable real-time user posts & likes.</p>
+          <h2>Cloud Sync & Network Storage</h2>
+          <p class="modal-subtitle">Connect your free Supabase instance to enable global real-time Folios, likes, and comments.</p>
         </div>
         <button class="close-modal" id="closeConfigBtn">&times;</button>
       </div>
@@ -237,8 +388,8 @@
         <div class="config-status-card" id="connectionStatusBox">
           <div class="status-indicator"></div>
           <div>
-            <strong id="statusText">Local Storage Mode Active</strong>
-            <p id="statusDesc">All posts, likes, and bookmarks are currently saved securely in your browser. Connect Supabase below to sync publicly.</p>
+            <strong id="statusText">Local Storage Active</strong>
+            <p id="statusDesc">All Folios, likes, and bookmarks are currently saved securely in your browser. Connect Supabase below to sync publicly.</p>
           </div>
         </div>
 
@@ -253,10 +404,10 @@
         </div>
 
         <div class="config-instructions">
-          <h4>How to get this for free (Takes 2 minutes):</h4>
+          <h4>Free Cloud Setup (Takes 2 minutes):</h4>
           <ol>
-            <li>Create a free account at <a href="https://supabase.com" target="_blank" rel="noreferrer">supabase.com</a>.</li>
-            <li>Create a new project (choose the free tier).</li>
+            <li>Create an account at <a href="https://supabase.com" target="_blank" rel="noreferrer">supabase.com</a>.</li>
+            <li>Create a new project (free tier).</li>
             <li>Go to <strong>Settings &rarr; API</strong> to copy your <strong>Project URL</strong> and <strong>Anon Key</strong>.</li>
             <li>Run the SQL script from <code>schema.sql</code> in the Supabase SQL Editor.</li>
           </ol>
@@ -270,20 +421,20 @@
     </div>
   </div>
 
-  <!-- Share & Export Post Modal -->
+  <!-- Share & Export Modal -->
   <div id="shareModal" class="modal-overlay" style="display: none;">
     <div class="modal-card">
       <div class="modal-header">
         <div>
-          <h2>Share Research Post</h2>
-          <p class="modal-subtitle">Share this paper breakdown with colleagues or across social channels.</p>
+          <h2>Share Folio</h2>
+          <p class="modal-subtitle">Share this research breakdown with colleagues or academic circles.</p>
         </div>
         <button class="close-modal" id="closeShareBtn">&times;</button>
       </div>
 
       <div class="share-body">
         <div class="share-field">
-          <label>Direct Post Link</label>
+          <label>Direct Folio Link</label>
           <div class="copy-input-row">
             <input type="text" id="shareUrlInput" readonly>
             <button class="btn btn-primary btn-sm" id="copyShareUrlBtn">Copy</button>
@@ -292,13 +443,13 @@
 
         <div class="share-actions-grid">
           <button class="share-option-btn" id="shareOnXBtn">
-            <span>Share on X / Twitter</span>
+            <span>Share on X / Academic Twitter</span>
           </button>
           <button class="share-option-btn" id="shareOnLinkedInBtn">
             <span>Share on LinkedIn</span>
           </button>
           <button class="share-option-btn" id="downloadCurrentCardBtn">
-            <span>Download High-Res Slide</span>
+            <span>Download Slide PNG</span>
           </button>
         </div>
       </div>

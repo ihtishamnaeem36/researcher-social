@@ -219,15 +219,15 @@ const CardGenerator = {
 
     ctx.font = '500 24px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = theme.textSecondary;
-    ctx.fillText(data.authors || 'Synapse Research Social', 90, height - 110);
+    ctx.fillText(data.authors || 'Noesis Scholarly Folio', 90, height - 110);
 
     ctx.font = '600 24px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = theme.accent;
-    ctx.fillText('SYNAPSE • SWIPE TO READ', width - 420, height - 110);
+    ctx.fillText('NOESIS • SWIPE TO READ', width - 420, height - 110);
 
     // Trigger download
     const link = document.createElement('a');
-    link.download = `synapse-card-slide-${slideIndex + 1}.png`;
+    link.download = `noesis-folio-slide-${slideIndex + 1}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   },

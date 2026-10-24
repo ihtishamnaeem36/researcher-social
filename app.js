@@ -1,9 +1,10 @@
 /**
- * app.js — Synapse Core Application Logic
- * Interactive horizontal carousels, live card generator studio, and social mechanics
+ * app.js — Noesis Core Application Logic
+ * Interactive horizontal carousels, live Folio Studio, sidebar navigation,
+ * theme management (dark/light), and intellectual discourse mechanics.
  */
 
-// Default Seed Papers to make the feed feel alive and intellectually stimulating immediately
+// Default Seed Folios to make the dispatch feed immediately rich and intellectually stimulating
 const SEED_PAPERS = [
   {
     id: 'seed-af3',
@@ -111,6 +112,54 @@ const SEED_PAPERS = [
   }
 ];
 
+// Archetype Templates Configurations
+const FOLIO_ARCHETYPES = {
+  empirical: {
+    titlePlaceholder: 'e.g. Accurate structure prediction of biomolecular interactions with AlphaFold 3',
+    slide1Label: 'The 1-Sentence Breakthrough Claim *',
+    slide1Placeholder: 'What did this paper discover or build in plain, punchy academic language?',
+    slide2Label: 'Slide 2: Methodology & Experimental Framework',
+    slide2Placeholder: 'How did they test or achieve this? Architecture, dataset size, experimental setup...',
+    slide3Label: 'Slide 3: Quantitative Findings & Benchmarks',
+    slide3Placeholder: 'Concrete numbers, accuracy improvements, statistical significance, or benchmark wins...',
+    slide4Label: 'Slide 4: Critical Frontier & Open Questions',
+    slide4Placeholder: 'Where does it fall short? What remains unresolved for future scholars?'
+  },
+  method: {
+    titlePlaceholder: 'e.g. FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning',
+    slide1Label: 'The Core Technical Problem & Proposed System *',
+    slide1Placeholder: 'What bottleneck or architectural limitation does this system eliminate?',
+    slide2Label: 'Slide 2: System Architecture & Algorithmic Pipeline',
+    slide2Placeholder: 'Algorithmic modifications, memory hierarchy optimizations, caching, or parallelization scheme...',
+    slide3Label: 'Slide 3: Benchmark Specs & Computational Performance',
+    slide3Placeholder: 'FLOPs utilization, speedup factors, memory reduction, latency comparisons...',
+    slide4Label: 'Slide 4: Implementation Constraints & Future Extensions',
+    slide4Placeholder: 'Hardware requirements, precision tradeoffs, corner cases, or upcoming hardware adaptations...'
+  },
+  hypothesis: {
+    titlePlaceholder: 'e.g. The Neuro-Epigenetic Priming Theory of Long-Term Memory Consolidation',
+    slide1Label: 'The Core Theoretical Thesis *',
+    slide1Placeholder: 'State the non-consensus theoretical proposition or mechanism in 1 bold statement.',
+    slide2Label: 'Slide 2: Mechanistic Principles & Causality',
+    slide2Placeholder: 'What is the causal sequence or biological/physical pathway driving this phenomenon?',
+    slide3Label: 'Slide 3: Observable Signatures & Testable Predictions',
+    slide3Placeholder: 'What concrete experimental predictions would confirm or observe this mechanism?',
+    slide4Label: 'Slide 4: Falsification Criteria & Counterarguments',
+    slide4Placeholder: 'Under what specific empirical observations would this hypothesis be conclusively disproven?'
+  },
+  review: {
+    titlePlaceholder: 'e.g. The Quantum Coherence in Biological Systems Debate: A Decade in Review',
+    slide1Label: 'State of Academic Consensus *',
+    slide1Placeholder: 'What has been the standard orthodox consensus or baseline belief in the literature?',
+    slide2Label: 'Slide 2: The Emerging Disputation or Anomaly',
+    slide2Placeholder: 'What conflicting experimental observations or papers have destabilized the old consensus?',
+    slide3Label: 'Slide 3: Synthesis of Multi-Study Evidence',
+    slide3Placeholder: 'Reconciling opposing studies: where do the methodologies diverge and explain contradictions?',
+    slide4Label: 'Slide 4: Unresolved Horizons & Grand Challenges',
+    slide4Placeholder: 'The 3 defining questions the field must answer over the next 5 years...'
+  }
+};
+
 // App State
 const state = {
   posts: [],
@@ -119,20 +168,55 @@ const state = {
   showSavedOnly: false,
   savedPostIds: new Set(['seed-transformer']),
   likedPostIds: new Set(['seed-transformer']),
+  currentTheme: 'dark',
   creator: {
     activeSlideIndex: 0,
-    selectedTheme: 'obsidian'
+    selectedTheme: 'obsidian',
+    selectedArchetype: 'empirical'
   }
 };
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
   SupabaseBridge.init();
   updateSupabaseStatusIndicator();
   await loadPosts();
   initEventListeners();
   initCreatorStudio();
+  updateSavedBadge();
 });
+
+/* ==========================================================================
+   Theme Management (Dark / Light)
+   ========================================================================== */
+function initTheme() {
+  const savedTheme = localStorage.getItem('noesis_theme') || 'dark';
+  applyTheme(savedTheme);
+}
+
+function applyTheme(theme) {
+  state.currentTheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('noesis_theme', theme);
+
+  const themeIcon = document.getElementById('themeIcon');
+  const themeLabel = document.getElementById('themeLabel');
+  if (themeIcon && themeLabel) {
+    if (theme === 'light') {
+      themeIcon.textContent = '☀️';
+      themeLabel.textContent = 'Light Mode';
+    } else {
+      themeIcon.textContent = '🌙';
+      themeLabel.textContent = 'Dark Mode';
+    }
+  }
+}
+
+function toggleTheme() {
+  const nextTheme = state.currentTheme === 'dark' ? 'light' : 'dark';
+  applyTheme(nextTheme);
+}
 
 function updateSupabaseStatusIndicator() {
   const dot = document.getElementById('dbIndicator');
@@ -141,16 +225,16 @@ function updateSupabaseStatusIndicator() {
   const statusDesc = document.getElementById('statusDesc');
 
   if (SupabaseBridge.config.isConnected) {
-    dot.className = 'db-status-dot connected';
+    if (dot) dot.className = 'db-status-dot connected';
     if (statusBox) {
       statusText.textContent = 'Connected to Supabase Cloud';
-      statusDesc.textContent = `Syncing directly with ${SupabaseBridge.config.url}. Community posts are shared globally.`;
+      statusDesc.textContent = `Syncing directly with ${SupabaseBridge.config.url}. Folios are shared globally in real time.`;
     }
   } else {
-    dot.className = 'db-status-dot';
+    if (dot) dot.className = 'db-status-dot';
     if (statusBox) {
-      statusText.textContent = 'Local Storage Mode Active';
-      statusDesc.textContent = 'No database attached yet. All your created posts and likes persist safely in browser storage.';
+      statusText.textContent = 'Local Storage Active';
+      statusDesc.textContent = 'No database attached yet. All your created Folios and bookmarks persist securely in browser storage.';
     }
   }
 }
@@ -166,12 +250,30 @@ async function loadPosts() {
   renderFeed();
 }
 
+function updateSavedBadge() {
+  const badge = document.getElementById('savedCountBadge');
+  if (badge) {
+    badge.textContent = state.savedPostIds.size;
+  }
+}
+
 /**
  * Render Posts Feed with horizontal swipeable carousels
  */
 function renderFeed() {
   const container = document.getElementById('postsFeed');
   const emptyState = document.getElementById('emptyFeedState');
+  const viewText = document.getElementById('currentViewText');
+
+  if (viewText) {
+    if (state.showSavedOnly) {
+      viewText.textContent = 'Library: Saved Folios';
+    } else if (state.currentTopic !== 'all') {
+      viewText.textContent = `Field: ${state.currentTopic}`;
+    } else {
+      viewText.textContent = 'Dispatch: All Disciplines';
+    }
+  }
 
   let filtered = state.posts.filter(p => {
     // Topic filter
@@ -201,10 +303,11 @@ function renderFeed() {
 
   // Attach carousel scroll listeners & buttons
   attachCarouselEvents();
+  updateSavedBadge();
 }
 
 /**
- * Generate HTML string for single post
+ * Generate HTML string for single Folio card
  */
 function renderPostCard(post) {
   const isLiked = state.likedPostIds.has(post.id);
@@ -216,7 +319,7 @@ function renderPostCard(post) {
       return `
         <div class="post-slide slide-type-hero" data-index="${idx}">
           <div class="slide-badge-row">
-            <span class="slide-label">● 1-Min Breakthrough Summary</span>
+            <span class="slide-label">● Core Thesis & Breakthrough</span>
             <span class="post-tag">${post.field}</span>
           </div>
           <div>
@@ -230,7 +333,7 @@ function renderPostCard(post) {
         </div>
       `;
     } else {
-      const stepTags = ['[01] Hook', '[02] Methodology', '[03] Key Evidence', '[04] Caveats & Future'];
+      const stepTags = ['[01] Thesis', '[02] Methodology & Specs', '[03] Quantitative Evidence', '[04] Critical Frontier'];
       return `
         <div class="post-slide slide-type-dive" data-index="${idx}">
           <div class="slide-badge-row">
@@ -244,62 +347,76 @@ function renderPostCard(post) {
             </div>
           </div>
           <div class="slide-footer-row">
-            <span>${idx === slideCount - 1 && post.doi ? `<a href="${post.doi}" target="_blank" rel="noreferrer">Open Full Paper (${post.doi.slice(0, 24)}...)</a>` : 'Slide ' + (idx + 1) + ' of ' + slideCount}</span>
-            <span>${idx < slideCount - 1 ? 'Swipe &rarr;' : 'End of Deck'}</span>
+            <span>${idx === slideCount - 1 && post.doi ? `<a href="${post.doi}" target="_blank" rel="noreferrer">Open Primary Source (${post.doi.slice(0, 24)}...)</a>` : 'Slide ' + (idx + 1) + ' of ' + slideCount}</span>
+            <span>${idx < slideCount - 1 ? 'Swipe &rarr;' : 'End of Folio'}</span>
           </div>
         </div>
       `;
     }
   }).join('');
 
-  // Dots
   const dotsHTML = post.slides.map((_, i) => `<span class="dot ${i === 0 ? 'active' : ''}" data-dot="${i}"></span>`).join('');
+
+  const commentsHTML = (post.comments || []).map(c => `
+    <div class="comment-item">
+      <span class="comment-author">${c.author}</span>
+      <span class="comment-text">${c.text}</span>
+    </div>
+  `).join('');
 
   return `
     <article class="post-card-wrapper" id="post-${post.id}">
+      <!-- Author & Header Row -->
       <header class="post-header">
         <div class="author-info">
           <div class="author-avatar">${getInitials(post.authors)}</div>
           <div class="author-meta">
             <span class="author-name">${post.authors}</span>
-            <span class="author-sub">${post.field} • ${formatDate(post.createdAt)}</span>
+            <span class="author-sub">${post.field} · ${formatDate(post.createdAt)}</span>
           </div>
         </div>
         <span class="post-tag">${post.field}</span>
       </header>
 
-      <!-- Carousel Track Container -->
+      <!-- Horizontal Multi-Slide Carousel -->
       <div class="carousel-container" data-post-id="${post.id}">
         <button class="carousel-btn prev" aria-label="Previous Slide">&larr;</button>
-        <button class="carousel-btn next" aria-label="Next Slide">&rarr;</button>
-
         <div class="carousel-track">
           ${slidesHTML}
         </div>
-
+        <button class="carousel-btn next" aria-label="Next Slide">&rarr;</button>
         <div class="carousel-dots">
           ${dotsHTML}
         </div>
       </div>
 
-      <!-- Actions Bar -->
-      <footer class="post-actions-bar">
+      <!-- Action Bar (Cite/Like, Discussion, Save, Share) -->
+      <div class="post-actions-bar">
         <div class="action-group">
-          <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Like">
+          <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Endorse this research">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
             </svg>
-            <span class="like-counter">${post.likes || 0}</span>
+            <span class="like-count">${post.likes || 0}</span>
           </button>
 
-          <button class="action-btn" onclick="toggleCommentsDrawer('${post.id}')" title="Discussion">
+          <button class="action-btn" onclick="toggleCommentsDrawer('${post.id}')" title="Scholarly peer discussion">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
-            <span>${(post.comments || []).length}</span>
+            <span>${(post.comments || []).length} Discuss</span>
+          </button>
+        </div>
+
+        <div class="action-group">
+          <button class="action-btn ${isSaved ? 'bookmarked' : ''}" onclick="toggleBookmark('${post.id}')" title="Save to Personal Library">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>${isSaved ? 'Saved' : 'Save'}</span>
           </button>
 
-          <button class="action-btn" onclick="openShareModal('${post.id}')" title="Share & Export">
+          <button class="action-btn" onclick="openShareModal('${post.id}')" title="Export & Share Folio">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="18" cy="5" r="3"></circle>
               <circle cx="6" cy="12" r="3"></circle>
@@ -307,33 +424,18 @@ function renderPostCard(post) {
               <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
               <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
             </svg>
-            <span>Share</span>
           </button>
         </div>
-
-        <div>
-          <button class="action-btn ${isSaved ? 'bookmarked' : ''}" onclick="toggleBookmark('${post.id}')" title="Save to Reading List">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <span>${isSaved ? 'Saved' : 'Save'}</span>
-          </button>
-        </div>
-      </footer>
+      </div>
 
       <!-- Expandable Discussion Drawer -->
       <div class="discussion-drawer" id="comments-${post.id}">
         <div class="comment-input-row">
-          <input type="text" id="comment-input-${post.id}" placeholder="Add scientific commentary or questions..." onkeydown="if(event.key==='Enter') submitComment('${post.id}')">
-          <button class="btn btn-sm btn-primary" onclick="submitComment('${post.id}')">Post</button>
+          <input type="text" id="comment-input-${post.id}" placeholder="Add a scholarly critique or observation..." onkeydown="if(event.key==='Enter') submitComment('${post.id}')">
+          <button class="btn btn-primary btn-sm" onclick="submitComment('${post.id}')">Send</button>
         </div>
         <div class="comments-list">
-          ${(post.comments || []).map(c => `
-            <div class="comment-item">
-              <span class="comment-author">${c.author}</span>
-              <span class="comment-text">${c.text}</span>
-            </div>
-          `).join('')}
+          ${commentsHTML.length > 0 ? commentsHTML : '<span style="color:var(--text-muted);font-size:0.82rem;">No critiques yet. Initiate the academic discussion.</span>'}
         </div>
       </div>
     </article>
@@ -341,7 +443,7 @@ function renderPostCard(post) {
 }
 
 /**
- * Attach listeners to carousel navigation tracks and buttons
+ * Attach swipe and button controls to all carousel tracks
  */
 function attachCarouselEvents() {
   document.querySelectorAll('.carousel-container').forEach(container => {
@@ -352,26 +454,56 @@ function attachCarouselEvents() {
 
     if (!track) return;
 
-    // Track scroll synchronization for dots
+    // Track scroll event to update active dot
     track.addEventListener('scroll', () => {
+      const scrollPos = track.scrollLeft;
       const slideWidth = track.clientWidth;
-      const activeIdx = Math.round(track.scrollLeft / slideWidth);
+      const activeIdx = Math.round(scrollPos / slideWidth);
+
       dots.forEach((dot, idx) => {
         dot.classList.toggle('active', idx === activeIdx);
       });
     });
 
-    // Arrow navigation
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => {
-        track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
+    // Arrow button controls
+    prevBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
+    });
+
+    nextBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
+    });
+
+    // Click on dots to jump
+    dots.forEach((dot, idx) => {
+      dot.addEventListener('click', () => {
+        track.scrollTo({ left: track.clientWidth * idx, behavior: 'smooth' });
       });
-    }
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
+    });
+
+    // Touch gesture support for mobile / tablet
+    let startX = 0;
+    let isDragging = false;
+
+    track.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      isDragging = true;
+    }, { passive: true });
+
+    track.addEventListener('touchend', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      const endX = e.changedTouches[0].clientX;
+      const diff = startX - endX;
+
+      if (diff > 50) {
         track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
-      });
-    }
+      } else if (diff < -50) {
+        track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
+      }
+    }, { passive: true });
   });
 }
 
@@ -379,76 +511,129 @@ function attachCarouselEvents() {
  * Social Action Handlers
  */
 async function toggleLike(postId) {
+  const post = state.posts.find(p => p.id === postId);
+  if (!post) return;
+
   const isLiked = state.likedPostIds.has(postId);
   if (isLiked) {
     state.likedPostIds.delete(postId);
-    await SupabaseBridge.toggleLike(postId, false);
+    post.likes = Math.max(0, (post.likes || 1) - 1);
   } else {
     state.likedPostIds.add(postId);
-    await SupabaseBridge.toggleLike(postId, true);
+    post.likes = (post.likes || 0) + 1;
+    SupabaseBridge.recordInteraction(postId, 'like');
   }
 
-  const post = state.posts.find(p => p.id === postId);
-  if (post) {
-    post.likes = Math.max(0, (post.likes || 0) + (isLiked ? -1 : 1));
+  // Update DOM directly for instant response
+  const card = document.getElementById(`post-${postId}`);
+  if (card) {
+    const likeBtn = card.querySelector('.action-btn');
+    const likeCount = card.querySelector('.like-count');
+    if (likeBtn) likeBtn.classList.toggle('liked', !isLiked);
+    if (likeCount) likeCount.textContent = post.likes;
   }
-
-  renderFeed();
 }
 
 function toggleBookmark(postId) {
-  if (state.savedPostIds.has(postId)) {
+  const isSaved = state.savedPostIds.has(postId);
+  if (isSaved) {
     state.savedPostIds.delete(postId);
   } else {
     state.savedPostIds.add(postId);
+    SupabaseBridge.recordInteraction(postId, 'bookmark');
   }
-  renderFeed();
+
+  updateSavedBadge();
+
+  if (state.showSavedOnly) {
+    renderFeed();
+  } else {
+    const card = document.getElementById(`post-${postId}`);
+    if (card) {
+      const bookBtn = card.querySelectorAll('.action-btn')[2];
+      if (bookBtn) {
+        bookBtn.classList.toggle('bookmarked', !isSaved);
+        bookBtn.querySelector('span').textContent = !isSaved ? 'Saved' : 'Save';
+      }
+    }
+  }
 }
 
 function toggleCommentsDrawer(postId) {
   const drawer = document.getElementById(`comments-${postId}`);
-  if (drawer) {
-    drawer.classList.toggle('open');
+  if (!drawer) return;
+  drawer.classList.toggle('open');
+  if (drawer.classList.contains('open')) {
+    const input = document.getElementById(`comment-input-${postId}`);
+    setTimeout(() => input?.focus(), 150);
   }
 }
 
-async function submitComment(postId) {
+function submitComment(postId) {
   const input = document.getElementById(`comment-input-${postId}`);
   if (!input || !input.value.trim()) return;
 
-  const comment = {
-    author: 'Ihtisham Naeem (Researcher)',
-    text: input.value.trim()
-  };
-
-  await SupabaseBridge.addComment(postId, comment);
+  const text = input.value.trim();
   const post = state.posts.find(p => p.id === postId);
-  if (post) {
-    if (!post.comments) post.comments = [];
-    post.comments.push(comment);
-  }
+  if (!post) return;
+
+  if (!post.comments) post.comments = [];
+  post.comments.push({
+    author: 'Ihtisham Naeem',
+    text: text
+  });
 
   input.value = '';
-  renderFeed();
-  toggleCommentsDrawer(postId); // Keep open
+  SupabaseBridge.recordInteraction(postId, 'comment', text);
+
+  // Re-render comments list in this card
+  const drawer = document.getElementById(`comments-${postId}`);
+  if (drawer) {
+    const list = drawer.querySelector('.comments-list');
+    if (list) {
+      list.innerHTML = post.comments.map(c => `
+        <div class="comment-item">
+          <span class="comment-author">${c.author}</span>
+          <span class="comment-text">${c.text}</span>
+        </div>
+      `).join('');
+    }
+  }
+
+  // Update comment counter button
+  const card = document.getElementById(`post-${postId}`);
+  if (card) {
+    const discussBtn = card.querySelectorAll('.action-btn')[1];
+    if (discussBtn) {
+      discussBtn.querySelector('span').textContent = `${post.comments.length} Discuss`;
+    }
+  }
 }
 
 /**
- * Creator Studio & Live Preview Engine
+ * Folio Studio & Live Card Generator Setup
  */
 function initCreatorStudio() {
-  const formInputs = ['postTitle', 'postAuthors', 'postField', 'postHook', 'postMethod', 'postResults', 'postCritique', 'postDoi'];
-  
-  formInputs.forEach(id => {
+  const inputs = ['postTitle', 'postAuthors', 'postField', 'postDoi', 'postHook', 'postMethod', 'postResults', 'postCritique'];
+  inputs.forEach(id => {
     const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('input', updateCreatorLivePreview);
-    }
+    el?.addEventListener('input', () => updateCreatorLivePreview());
   });
 
-  // Theme selector
+  // Archetype Template Selector
+  document.querySelectorAll('.template-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.template-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const archetypeKey = chip.dataset.template;
+      state.creator.selectedArchetype = archetypeKey;
+      applyFolioArchetype(archetypeKey);
+    });
+  });
+
+  // Theme selection chips inside creator
   document.querySelectorAll('.theme-chip').forEach(chip => {
-    chip.addEventListener('click', (e) => {
+    chip.addEventListener('click', () => {
       document.querySelectorAll('.theme-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       state.creator.selectedTheme = chip.dataset.theme;
@@ -486,18 +671,18 @@ function initCreatorStudio() {
     CardGenerator.exportToCanvas(data, state.creator.activeSlideIndex, state.creator.selectedTheme);
   });
 
-  // Publish Post
+  // Publish Folio to Feed
   document.getElementById('publishPostBtn')?.addEventListener('click', async () => {
     const data = getCreatorFormData();
     if (!data.title || !data.hook) {
-      alert('Please provide at least a Paper Title and a 1-sentence Breakthrough Claim (Hook).');
+      alert('Please provide at least a Paper/Treatise Title and the 1-Sentence Core Thesis.');
       return;
     }
 
     const newPost = {
-      id: 'post-' + Date.now(),
+      id: 'folio-' + Date.now(),
       title: data.title,
-      authors: data.authors || 'Independent Researcher',
+      authors: data.authors || 'Independent Scholar',
       field: data.field,
       doi: data.doi,
       theme: state.creator.selectedTheme,
@@ -506,9 +691,9 @@ function initCreatorStudio() {
       comments: [],
       slides: [
         { type: 'hero', hook: data.hook },
-        { type: 'method', title: 'Methodology & Setup', content: data.method || 'Standard experimental protocols applied.' },
-        { type: 'results', title: 'Breakthrough Findings', content: data.results || 'Data highlights significant effects across primary parameters.' },
-        { type: 'critique', title: 'Critical Evaluation', content: data.critique || 'Future cross-validation studies needed.' }
+        { type: 'method', title: 'Methodology & Specs', content: data.method || 'Standard experimental protocols applied.' },
+        { type: 'results', title: 'Quantitative Findings', content: data.results || 'Data highlights significant effects across primary parameters.' },
+        { type: 'critique', title: 'Critical Frontier', content: data.critique || 'Future cross-validation studies needed.' }
       ]
     };
 
@@ -521,6 +706,31 @@ function initCreatorStudio() {
     document.getElementById('paperForm').reset();
     renderFeed();
   });
+
+  updateCreatorLivePreview();
+}
+
+function applyFolioArchetype(key) {
+  const arch = FOLIO_ARCHETYPES[key] || FOLIO_ARCHETYPES.empirical;
+  const titleInput = document.getElementById('postTitle');
+  const slide1Label = document.getElementById('lblSlide1Label');
+  const slide1Input = document.getElementById('postHook');
+  const slide2Label = document.getElementById('lblSlide2Label');
+  const slide2Input = document.getElementById('postMethod');
+  const slide3Label = document.getElementById('lblSlide3Label');
+  const slide3Input = document.getElementById('postResults');
+  const slide4Label = document.getElementById('lblSlide4Label');
+  const slide4Input = document.getElementById('postCritique');
+
+  if (titleInput) titleInput.placeholder = arch.titlePlaceholder;
+  if (slide1Label) slide1Label.textContent = arch.slide1Label;
+  if (slide1Input) slide1Input.placeholder = arch.slide1Placeholder;
+  if (slide2Label) slide2Label.textContent = arch.slide2Label;
+  if (slide2Input) slide2Input.placeholder = arch.slide2Placeholder;
+  if (slide3Label) slide3Label.textContent = arch.slide3Label;
+  if (slide3Input) slide3Input.placeholder = arch.slide3Placeholder;
+  if (slide4Label) slide4Label.textContent = arch.slide4Label;
+  if (slide4Input) slide4Input.placeholder = arch.slide4Placeholder;
 
   updateCreatorLivePreview();
 }
@@ -555,24 +765,76 @@ function updateCreatorLivePreview() {
 }
 
 /**
- * Filter & Modal Event Listeners
+ * Filter & Sidebar Event Listeners
  */
 function initEventListeners() {
-  // Topic filter pills
+  // Theme Toggle
+  document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
+    toggleTheme();
+  });
+
+  // Top topic filter pills
   document.querySelectorAll('.topic-pill').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.topic-pill').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.currentTopic = btn.dataset.topic;
-      renderFeed();
+      syncTopicSelection(btn.dataset.topic);
     });
   });
 
-  // Saved toggle
+  // Sidebar discipline items
+  document.querySelectorAll('.discipline-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      syncTopicSelection(btn.dataset.topic);
+      // Close mobile sidebar if open
+      document.getElementById('sidebarNav')?.classList.remove('mobile-open');
+    });
+  });
+
+  function syncTopicSelection(topic) {
+    state.currentTopic = topic;
+    state.showSavedOnly = false;
+
+    // Sync pills
+    document.querySelectorAll('.topic-pill').forEach(b => {
+      b.classList.toggle('active', b.dataset.topic === topic);
+    });
+    // Sync sidebar disciplines
+    document.querySelectorAll('.discipline-nav-item').forEach(b => {
+      b.classList.toggle('active', b.dataset.topic === topic);
+    });
+    // Sync nav links
+    document.getElementById('navFeedBtn')?.classList.add('active');
+    document.getElementById('navSavedBtn')?.classList.remove('active');
+    document.getElementById('filterSavedOnly')?.classList.remove('active');
+
+    renderFeed();
+  }
+
+  // Sidebar Nav: Dispatch Feed
+  document.getElementById('navFeedBtn')?.addEventListener('click', () => {
+    syncTopicSelection('all');
+  });
+
+  // Sidebar Nav: Saved Folios
+  document.getElementById('navSavedBtn')?.addEventListener('click', () => {
+    state.showSavedOnly = true;
+    document.getElementById('navSavedBtn')?.classList.add('active');
+    document.getElementById('navFeedBtn')?.classList.remove('active');
+    document.getElementById('filterSavedOnly')?.classList.add('active');
+    renderFeed();
+  });
+
+  // Top Bar Saved Toggle Button
   document.getElementById('filterSavedOnly')?.addEventListener('click', (e) => {
     state.showSavedOnly = !state.showSavedOnly;
     e.currentTarget.classList.toggle('active', state.showSavedOnly);
+    document.getElementById('navSavedBtn')?.classList.toggle('active', state.showSavedOnly);
+    document.getElementById('navFeedBtn')?.classList.toggle('active', !state.showSavedOnly);
     renderFeed();
+  });
+
+  // Sidebar Nav: Folio Studio
+  document.getElementById('navStudioBtn')?.addEventListener('click', () => {
+    openFolioStudio();
   });
 
   // Search input
@@ -583,12 +845,23 @@ function initEventListeners() {
 
   // Modals opening/closing
   const createModal = document.getElementById('createPostModal');
-  document.getElementById('openNewPostBtn')?.addEventListener('click', () => {
+  function openFolioStudio() {
     createModal.style.display = 'flex';
     updateCreatorLivePreview();
-  });
+  }
+
+  document.getElementById('openNewPostBtn')?.addEventListener('click', openFolioStudio);
+  document.getElementById('topDraftFolioBtn')?.addEventListener('click', openFolioStudio);
   document.getElementById('closeCreatePostBtn')?.addEventListener('click', () => createModal.style.display = 'none');
   document.getElementById('cancelPostBtn')?.addEventListener('click', () => createModal.style.display = 'none');
+
+  // Mobile menu toggle
+  document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
+    document.getElementById('sidebarNav')?.classList.toggle('mobile-open');
+  });
+  document.getElementById('sidebarCollapseBtn')?.addEventListener('click', () => {
+    document.getElementById('sidebarNav')?.classList.remove('mobile-open');
+  });
 
   // Supabase Config Modal
   const configModal = document.getElementById('configModal');
@@ -620,7 +893,7 @@ function initEventListeners() {
     const input = document.getElementById('shareUrlInput');
     input.select();
     navigator.clipboard.writeText(input.value);
-    alert('Link copied to clipboard!');
+    alert('Folio link copied to clipboard!');
   });
 }
 
@@ -632,12 +905,12 @@ function openShareModal(postId) {
 
   const modal = document.getElementById('shareModal');
   const input = document.getElementById('shareUrlInput');
-  const url = `${window.location.origin}${window.location.pathname}#post-${postId}`;
+  const url = `${window.location.origin}${window.location.pathname}#folio-${postId}`;
   input.value = url;
 
   // Social share buttons
   document.getElementById('shareOnXBtn').onclick = () => {
-    const text = encodeURIComponent(`Check out this breakthrough paper summary on Synapse: "${post.title}"\n${url}`);
+    const text = encodeURIComponent(`Check out this breakthrough research Folio on Noesis: "${post.title}"\n${url}`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
 
@@ -664,7 +937,7 @@ function openShareModal(postId) {
 
 // Helpers
 function getInitials(name) {
-  if (!name) return 'RS';
+  if (!name) return 'NO';
   const parts = name.replace(/[(),]/g, '').split(' ');
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
