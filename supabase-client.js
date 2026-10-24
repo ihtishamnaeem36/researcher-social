@@ -1,14 +1,25 @@
 /**
- * supabase-client.js
- * Transparent storage bridge: Seamlessly uses Supabase when configured,
- * or persistent browser localStorage for zero-barrier local exploration.
+ * supabase-client.js — Noesis Central Database Bridge
+ * 
+ * Instructions to connect Supabase:
+ * 1. Create a free project at https://supabase.com
+ * 2. In Supabase, go to Settings -> API
+ * 3. Paste your "Project URL" and "anon public" key into PLATFORM_SUPABASE_CONFIG below.
+ * 4. Run schema.sql in your Supabase SQL Editor.
+ * That's it! All users worldwide will automatically connect to your shared cloud database.
  */
 
+const PLATFORM_SUPABASE_CONFIG = {
+  // === PASTE YOUR SUPABASE CREDENTIALS HERE ===
+  url: '',      // e.g. 'https://abcdefghijklm.supabase.co'
+  anonKey: ''   // e.g. 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey...'
+};
+
 const SupabaseBridge = {
-  STORAGE_KEY_URL: 'synapse_supabase_url',
-  STORAGE_KEY_KEY: 'synapse_supabase_key',
-  STORAGE_KEY_LOCAL_POSTS: 'synapse_local_posts',
-  STORAGE_KEY_INTERACTIONS: 'synapse_user_interactions',
+  STORAGE_KEY_URL: 'noesis_supabase_url',
+  STORAGE_KEY_KEY: 'noesis_supabase_key',
+  STORAGE_KEY_LOCAL_POSTS: 'noesis_local_folios',
+  STORAGE_KEY_INTERACTIONS: 'noesis_user_interactions',
 
   config: {
     url: '',
@@ -17,35 +28,22 @@ const SupabaseBridge = {
   },
 
   init() {
-    this.config.url = localStorage.getItem(this.STORAGE_KEY_URL) || '';
-    this.config.anonKey = localStorage.getItem(this.STORAGE_KEY_KEY) || '';
+    // Prefer central platform config; fallback to localStorage if set
+    this.config.url = (PLATFORM_SUPABASE_CONFIG.url || localStorage.getItem(this.STORAGE_KEY_URL) || '').trim();
+    this.config.anonKey = (PLATFORM_SUPABASE_CONFIG.anonKey || localStorage.getItem(this.STORAGE_KEY_KEY) || '').trim();
     this.config.isConnected = !!(this.config.url && this.config.anonKey);
+
+    if (this.config.isConnected) {
+      console.log('⚡ Noesis: Connected to central Supabase cloud backend.');
+    } else {
+      console.log('📁 Noesis: Operating in browser LocalStorage mode (offline / demo ready).');
+    }
+
     return this.config;
   },
 
-  saveCredentials(url, anonKey) {
-    if (!url || !anonKey) {
-      this.clearCredentials();
-      return false;
-    }
-    localStorage.setItem(this.STORAGE_KEY_URL, url.trim());
-    localStorage.setItem(this.STORAGE_KEY_KEY, anonKey.trim());
-    this.config.url = url.trim();
-    this.config.anonKey = anonKey.trim();
-    this.config.isConnected = true;
-    return true;
-  },
-
-  clearCredentials() {
-    localStorage.removeItem(this.STORAGE_KEY_URL);
-    localStorage.removeItem(this.STORAGE_KEY_KEY);
-    this.config.url = '';
-    this.config.anonKey = '';
-    this.config.isConnected = false;
-  },
-
   /**
-   * Fetch all posts (from Supabase if configured, otherwise localStorage)
+   * Fetch all Folios (from Supabase if configured, otherwise localStorage)
    */
   async getPosts() {
     if (this.config.isConnected) {
@@ -61,7 +59,7 @@ const SupabaseBridge = {
           return cloudPosts.map(p => ({
             id: p.id,
             title: p.paper_title,
-            authors: p.authors || 'Researcher',
+            authors: p.authors || 'Scholar',
             field: p.field_tag || 'General Science',
             doi: p.paper_url || '',
             theme: p.theme || 'obsidian',
@@ -72,7 +70,7 @@ const SupabaseBridge = {
           }));
         }
       } catch (err) {
-        console.warn('Supabase fetch failed, falling back to local posts:', err);
+        console.warn('Supabase fetch failed, falling back to local storage:', err);
       }
     }
 
@@ -82,7 +80,7 @@ const SupabaseBridge = {
   },
 
   /**
-   * Save a newly created post
+   * Save a newly created Folio
    */
   async createPost(post) {
     if (this.config.isConnected) {
@@ -94,7 +92,7 @@ const SupabaseBridge = {
           field_tag: post.field,
           theme: post.theme,
           slides: post.slides,
-          likes_count: post.likes || 0,
+          likes_count: post.likes || 1,
           comments: []
         };
 
@@ -114,7 +112,7 @@ const SupabaseBridge = {
           return inserted[0];
         }
       } catch (err) {
-        console.error('Failed to post to Supabase:', err);
+        console.error('Failed to publish Folio to Supabase:', err);
       }
     }
 
@@ -126,47 +124,36 @@ const SupabaseBridge = {
   },
 
   /**
-   * Update interaction (likes or bookmark)
+   * Record interactions (likes, bookmarks, comments)
    */
-  async toggleLike(postId, increment) {
+  async recordInteraction(postId, type, data) {
     const posts = (await this.getPosts()) || [];
     const target = posts.find(p => p.id === postId);
-    if (target) {
-      target.likes = Math.max(0, (target.likes || 0) + (increment ? 1 : -1));
-      localStorage.setItem(this.STORAGE_KEY_LOCAL_POSTS, JSON.stringify(posts));
 
-      if (this.config.isConnected) {
-        try {
-          await fetch(`${this.config.url}/rest/v1/posts?id=eq.${postId}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': this.config.anonKey,
-              'Authorization': `Bearer ${this.config.anonKey}`
-            },
-            body: JSON.stringify({ likes_count: target.likes })
-          });
-        } catch (e) {
-          console.warn('Sync like to Supabase failed', e);
+    if (target) {
+      if (type === 'like') {
+        target.likes = (target.likes || 0) + 1;
+        if (this.config.isConnected) {
+          try {
+            await fetch(`${this.config.url}/rest/v1/posts?id=eq.${postId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': this.config.anonKey,
+                'Authorization': `Bearer ${this.config.anonKey}`
+              },
+              body: JSON.stringify({ likes_count: target.likes })
+            });
+          } catch (e) {
+            console.warn('Sync like to Supabase failed', e);
+          }
         }
+      } else if (type === 'comment' && data) {
+        if (!target.comments) target.comments = [];
+        target.comments.push({ author: 'Ihtisham Naeem', text: data });
       }
-      return target.likes;
-    }
-    return 0;
-  },
 
-  /**
-   * Add a comment to post
-   */
-  async addComment(postId, comment) {
-    const posts = (await this.getPosts()) || [];
-    const target = posts.find(p => p.id === postId);
-    if (target) {
-      if (!target.comments) target.comments = [];
-      target.comments.push(comment);
       localStorage.setItem(this.STORAGE_KEY_LOCAL_POSTS, JSON.stringify(posts));
-      return target.comments;
     }
-    return [];
   }
 };

@@ -863,28 +863,6 @@ function initEventListeners() {
     document.getElementById('sidebarNav')?.classList.remove('mobile-open');
   });
 
-  // Supabase Config Modal
-  const configModal = document.getElementById('configModal');
-  document.getElementById('openConfigBtn')?.addEventListener('click', () => {
-    document.getElementById('sbUrl').value = SupabaseBridge.config.url || '';
-    document.getElementById('sbAnonKey').value = SupabaseBridge.config.anonKey || '';
-    configModal.style.display = 'flex';
-  });
-  document.getElementById('closeConfigBtn')?.addEventListener('click', () => configModal.style.display = 'none');
-  document.getElementById('saveSbConfigBtn')?.addEventListener('click', async () => {
-    const url = document.getElementById('sbUrl').value;
-    const key = document.getElementById('sbAnonKey').value;
-    SupabaseBridge.saveCredentials(url, key);
-    updateSupabaseStatusIndicator();
-    configModal.style.display = 'none';
-    await loadPosts();
-  });
-  document.getElementById('clearSbConfigBtn')?.addEventListener('click', async () => {
-    SupabaseBridge.clearCredentials();
-    updateSupabaseStatusIndicator();
-    configModal.style.display = 'none';
-    await loadPosts();
-  });
 
   // Share Modal
   const shareModal = document.getElementById('shareModal');

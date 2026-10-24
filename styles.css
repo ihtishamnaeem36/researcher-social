@@ -815,7 +815,7 @@ a:hover {
   height: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;
-  padding: 2.5rem 2.8rem;
+  padding: 2.4rem 4.8rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -955,10 +955,10 @@ a:hover {
 }
 
 .carousel-btn.prev {
-  left: 1.1rem;
+  left: 0.85rem;
 }
 .carousel-btn.next {
-  right: 1.1rem;
+  right: 0.85rem;
 }
 
 /* Carousel Indicators (Dots) */
@@ -1607,7 +1607,13 @@ input:focus, select:focus, textarea:focus {
     aspect-ratio: 4 / 3.4;
   }
   .post-slide {
-    padding: 1.75rem 1.5rem;
+    padding: 1.75rem 3.4rem;
+  }
+  .carousel-btn.prev {
+    left: 0.5rem;
+  }
+  .carousel-btn.next {
+    right: 0.5rem;
   }
   .paper-hero-title {
     font-size: 1.45rem;
