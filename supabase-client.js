@@ -10,9 +10,9 @@
  */
 
 const PLATFORM_SUPABASE_CONFIG = {
-  // === PASTE YOUR SUPABASE CREDENTIALS HERE ===
-  url: '',      // e.g. 'https://abcdefghijklm.supabase.co'
-  anonKey: ''   // e.g. 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey...'
+  // === CENTRAL SUPABASE CLOUD BACKEND ===
+  url: 'https://czrqmnvggfjwydysnmlg.supabase.co',
+  anonKey: 'sb_publishable_EPNsN1GKUvisSadRi5kOyQ_Ox2XuQDS'
 };
 
 const SupabaseBridge = {
