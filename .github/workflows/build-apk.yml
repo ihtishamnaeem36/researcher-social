@@ -42,7 +42,7 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee ../gradle-build.log || { echo "=== GRADLE FAILURE LOG ==="; tail -n 80 ../gradle-build.log; exit 1; }
 
       - name: Copy & Rename APK
         run: |
