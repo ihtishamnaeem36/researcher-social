@@ -794,6 +794,71 @@ a:hover {
   overflow: hidden;
 }
 
+/* Instagram Multi-Photo Counter Badge */
+.carousel-counter-badge {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 15;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: rgba(10, 14, 26, 0.75);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+  transition: opacity var(--transition-fast);
+}
+
+[data-theme="light"] .carousel-counter-badge {
+  background: rgba(255, 255, 255, 0.88);
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Instagram Double-Tap Heart Burst Animation */
+.instagram-heart-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  color: #f43f5e;
+  filter: drop-shadow(0 4px 25px rgba(244, 63, 94, 0.75));
+  z-index: 50;
+  pointer-events: none;
+  animation: heartBurstAnim 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes heartBurstAnim {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 0.92;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0;
+  }
+}
+
+/* Mobile-only elements are strictly hidden on Desktop */
+.mobile-bottom-nav,
+.mobile-brand-title {
+  display: none !important;
+}
+
 .carousel-track {
   display: flex;
   width: 100%;
@@ -1804,41 +1869,388 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 820px) {
+  /* Sidebar Drawer on Mobile */
   .sidebar-nav {
     position: fixed;
     left: -100%;
     box-shadow: var(--shadow-lg);
     transition: left var(--transition-normal);
+    z-index: 1001;
   }
   .sidebar-nav.mobile-open {
     left: 0;
   }
   .mobile-toggle-btn {
     display: inline-flex;
-  }
-  .app-topbar {
-    padding: 0.75rem 1rem;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 6px;
+    cursor: pointer;
   }
   .view-indicator {
     display: none;
   }
+
+  /* Instagram Sticky Top App Bar */
+  .app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(10, 14, 24, 0.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .mobile-brand-title {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0.25rem;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .mobile-brand-name {
+    font-family: var(--font-sans);
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    background: linear-gradient(135deg, #ffffff 30%, var(--accent-cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .topbar-left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .search-bar {
+    max-width: none;
+    flex: 1;
+    margin-left: 0.25rem;
+  }
+
+  .search-bar input {
+    height: 36px;
+    font-size: 0.85rem;
+    padding: 0 0.75rem 0 2rem;
+  }
+
+  .topbar-right #topDraftFolioBtn {
+    display: none; /* Moved to center '+' button in mobile bottom nav */
+  }
+
+  /* Viewport Layout on Mobile */
+  .app-fluid-content {
+    padding: 0.5rem 0.5rem calc(72px + env(safe-area-inset-bottom, 12px)) 0.5rem;
+  }
+
+  /* Horizontal Stories / Disciplines Strip */
+  .filter-strip {
+    margin-bottom: 0.75rem;
+    padding: 0.35rem 0;
+    background: transparent;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .topics-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 2px 4px 6px 4px;
+  }
+  .topics-wrapper::-webkit-scrollbar {
+    display: none;
+  }
+
+  .topic-pill {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 9999px;
+    touch-action: manipulation;
+  }
+  .topic-pill:active {
+    transform: scale(0.94);
+  }
+  .topic-pill.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  }
+
+  .filter-toggles {
+    display: none;
+  }
+
+  /* Edge-to-Edge Instagram Feed on Phone */
   .feed-container {
+    padding: 0;
     max-width: 100%;
   }
+
+  .post-card-wrapper {
+    border-radius: 12px;
+    margin: 0 0 1rem 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+
+  .post-header {
+    padding: 0.75rem 0.95rem;
+  }
+
+  .author-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8rem;
+    border-width: 1.5px;
+  }
+
+  .author-name {
+    font-size: 0.88rem;
+  }
+
+  .author-sub {
+    font-size: 0.72rem;
+  }
+
+  .post-tag {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+  }
+
+  /* Carousel Proportions for Phone (Instagram Portrait Feel) */
   .carousel-container {
-    aspect-ratio: 4 / 3.4;
+    aspect-ratio: 4 / 4.4;
+    min-height: 380px;
   }
+
   .post-slide {
-    padding: 1.75rem 3.4rem;
+    padding: 1.5rem 1.25rem; /* Generous text width, no squishing! */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
-  .carousel-btn.prev {
-    left: 0.5rem;
-  }
-  .carousel-btn.next {
-    right: 0.5rem;
-  }
+
   .paper-hero-title {
-    font-size: 1.45rem;
+    font-size: 1.35rem;
+    line-height: 1.35;
+    margin-bottom: 0.85rem;
+  }
+
+  .hero-hook-text {
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .slide-inner-title {
+    font-size: 1.15rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .slide-inner-body {
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  /* Subtle, unobtrusive carousel buttons on touch screens */
+  .carousel-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 0.7;
+  }
+
+  .carousel-btn.prev {
+    left: 0.4rem;
+  }
+
+  .carousel-btn.next {
+    right: 0.4rem;
+  }
+
+  /* Instagram Action Bar on Phone */
+  .post-actions-bar {
+    padding: 0.65rem 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .action-group {
+    gap: 0.35rem;
+  }
+
+  .action-btn {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.82rem;
+    border-radius: 8px;
+    touch-action: manipulation;
+  }
+
+  .action-btn:active {
+    transform: scale(0.92);
+  }
+
+  .action-btn svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  /* Book-Page Exposition Drawer on Phone */
+  .book-page-container {
+    padding: 1.5rem 1.15rem;
+  }
+
+  .book-work-title {
+    font-size: 1.22rem;
+  }
+
+  .book-paragraph {
+    font-size: 0.98rem;
+    line-height: 1.72;
+    text-align: left;
+  }
+
+  /* Comments Drawer on Phone */
+  .discussion-drawer {
+    padding: 1rem 0.85rem;
+  }
+
+  .comment-item {
+    padding: 0.75rem;
+  }
+
+  .replies-thread {
+    margin-left: 0.75rem;
+    padding-left: 0.65rem;
+  }
+
+  /* Modals on Phone */
+  .modal-card {
+    margin: 1rem;
+    max-height: 90vh;
+    padding: 1.25rem;
+  }
+
+  /* Instagram Mobile Bottom Navigation Bar */
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: rgba(10, 14, 24, 0.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-subtle);
+    z-index: 999;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  .mobile-nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 6px 0;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: color var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .mobile-nav-tab:active {
+    transform: scale(0.9);
+  }
+
+  .mobile-nav-tab.active {
+    color: var(--accent-cyan);
+  }
+
+  .mobile-nav-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-top: 2px;
+    letter-spacing: 0.02em;
+  }
+
+  .mobile-create-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(56, 189, 248, 0.45);
+    margin-bottom: 2px;
+  }
+
+  .mobile-nav-icon-badge-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .mobile-badge {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    background: #f43f5e;
+    color: #ffffff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 9999px;
+    min-width: 14px;
+    text-align: center;
+  }
+
+  .mobile-user-avatar-wrap {
+    font-size: 1.15rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .post-card-wrapper {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  .carousel-container {
+    min-height: 360px;
+    aspect-ratio: 1 / 1.1;
   }
 }
 
@@ -2281,6 +2693,48 @@ input:focus, select:focus, textarea:focus {
   color: #0284c7;
   border-color: #0284c7;
   background: #f0f9ff;
+}
+
+/* Light Mode Mobile Bottom Navigation & Topbar */
+@media (max-width: 820px) {
+  [data-theme="light"] .app-topbar {
+    background: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  [data-theme="light"] .mobile-bottom-nav {
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+  }
+
+  [data-theme="light"] .mobile-nav-tab.active {
+    color: #0284c7;
+  }
+
+  [data-theme="light"] .mobile-create-icon-wrap {
+    background: linear-gradient(135deg, #0284c7, #2563eb);
+    box-shadow: 0 2px 10px rgba(2, 132, 199, 0.35);
+  }
+
+  [data-theme="light"] .mobile-brand-name {
+    background: linear-gradient(135deg, #0f172a 30%, #0284c7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  [data-theme="light"] .topic-pill.active {
+    background: #e0f2fe;
+    border-color: #0284c7;
+    box-shadow: 0 0 10px rgba(2, 132, 199, 0.2);
+    color: #0369a1;
+  }
+
+  [data-theme="light"] .carousel-btn {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #0f172a;
+  }
 }
 
 

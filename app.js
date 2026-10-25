@@ -232,6 +232,15 @@ function applyTheme(theme) {
       themeLabel.textContent = 'Dark Mode';
     }
   }
+
+  const mobileThemeEmoji = document.getElementById('mobileThemeEmoji');
+  const mobileThemeLabel = document.getElementById('mobileThemeLabel');
+  if (mobileThemeEmoji) {
+    mobileThemeEmoji.textContent = theme === 'light' ? '☀️' : '🌙';
+  }
+  if (mobileThemeLabel) {
+    mobileThemeLabel.textContent = theme === 'light' ? 'Light' : 'Dark';
+  }
 }
 
 function toggleTheme() {
@@ -290,6 +299,10 @@ function updateSavedBadge() {
   const badge = document.getElementById('savedCountBadge');
   if (badge) {
     badge.textContent = state.savedPostIds.size;
+  }
+  const mobileBadge = document.getElementById('mobileSavedCountBadge');
+  if (mobileBadge) {
+    mobileBadge.textContent = state.savedPostIds.size;
   }
 }
 
@@ -467,6 +480,7 @@ function renderPostCard(post) {
 
       <!-- Horizontal Multi-Slide Carousel -->
       <div class="carousel-container" data-post-id="${post.id}">
+        <div class="carousel-counter-badge" id="counter-${post.id}">1/${post.slides.length}</div>
         <button class="carousel-btn prev" aria-label="Previous Slide">&larr;</button>
         <div class="carousel-track">
           ${slidesHTML}
@@ -578,16 +592,22 @@ function attachCarouselEvents() {
 
     if (!track) return;
 
-    // Track scroll event to update active dot
+    const badge = container.querySelector('.carousel-counter-badge');
+
+    // Track scroll event to update active dot and Instagram-style counter badge
     track.addEventListener('scroll', () => {
       const scrollPos = track.scrollLeft;
-      const slideWidth = track.clientWidth;
+      const slideWidth = track.clientWidth || 1;
       const activeIdx = Math.round(scrollPos / slideWidth);
 
       dots.forEach((dot, idx) => {
         dot.classList.toggle('active', idx === activeIdx);
       });
-    });
+
+      if (badge && dots.length > 0) {
+        badge.textContent = `${Math.min(activeIdx + 1, dots.length)}/${dots.length}`;
+      }
+    }, { passive: true });
 
     // Arrow button controls
     prevBtn?.addEventListener('click', (e) => {
@@ -607,9 +627,10 @@ function attachCarouselEvents() {
       });
     });
 
-    // Touch gesture support for mobile / tablet
+    // Touch gesture support for mobile / tablet + Instagram Double-Tap to Like
     let startX = 0;
     let isDragging = false;
+    let lastTapTime = 0;
 
     track.addEventListener('touchstart', (e) => {
       startX = e.touches[0].clientX;
@@ -617,18 +638,56 @@ function attachCarouselEvents() {
     }, { passive: true });
 
     track.addEventListener('touchend', (e) => {
+      // Check for Instagram Double-Tap to Like
+      const now = Date.now();
+      const interval = now - lastTapTime;
+      if (interval < 320 && interval > 40) {
+        const postId = container.getAttribute('data-post-id');
+        if (postId) {
+          triggerDoubleTapLike(postId, container);
+        }
+      }
+      lastTapTime = now;
+
       if (!isDragging) return;
       isDragging = false;
       const endX = e.changedTouches[0].clientX;
       const diff = startX - endX;
 
-      if (diff > 50) {
+      if (diff > 45) {
         track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
-      } else if (diff < -50) {
+      } else if (diff < -45) {
         track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
       }
     }, { passive: true });
   });
+}
+
+/**
+ * Trigger Instagram-style heart burst in center of slide and endorse research
+ */
+function triggerDoubleTapLike(postId, container) {
+  if (!state.likedPostIds.has(postId)) {
+    toggleLike(postId);
+  }
+
+  // Create luminous heart burst element
+  const heart = document.createElement('div');
+  heart.className = 'instagram-heart-burst';
+  heart.innerHTML = `
+    <svg width="78" height="78" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    </svg>
+  `;
+  container.appendChild(heart);
+
+  try {
+    if (navigator.vibrate) navigator.vibrate(15);
+  } catch (err) {}
+
+  setTimeout(() => {
+    heart.remove();
+  }, 880);
 }
 
 /**
@@ -1334,6 +1393,50 @@ function initEventListeners() {
   });
   document.getElementById('sidebarCollapseBtn')?.addEventListener('click', () => {
     document.getElementById('sidebarNav')?.classList.remove('mobile-open');
+  });
+
+  // Instagram-Style Mobile Bottom Navigation Tabs (Phone Only)
+  const mobileTabs = document.querySelectorAll('.mobile-nav-tab');
+  const setMobileActiveTab = (activeId) => {
+    mobileTabs.forEach(tab => tab.classList.toggle('active', tab.id === activeId));
+  };
+
+  document.getElementById('mobileTabHome')?.addEventListener('click', () => {
+    setMobileActiveTab('mobileTabHome');
+    state.showSavedOnly = false;
+    document.getElementById('navSavedBtn')?.classList.remove('active');
+    document.getElementById('navFeedBtn')?.classList.add('active');
+    document.getElementById('filterSavedOnly')?.classList.remove('active');
+    syncTopicSelection('all');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.getElementById('mobileTabExplore')?.addEventListener('click', () => {
+    setMobileActiveTab('mobileTabExplore');
+    const searchInput = document.getElementById('searchInput');
+    const topicsStrip = document.querySelector('.filter-strip');
+    if (topicsStrip) {
+      topicsStrip.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    setTimeout(() => searchInput?.focus(), 250);
+  });
+
+  document.getElementById('mobileTabCreate')?.addEventListener('click', () => {
+    openFolioStudio();
+  });
+
+  document.getElementById('mobileTabSaved')?.addEventListener('click', () => {
+    setMobileActiveTab('mobileTabSaved');
+    state.showSavedOnly = true;
+    document.getElementById('navSavedBtn')?.classList.add('active');
+    document.getElementById('navFeedBtn')?.classList.remove('active');
+    document.getElementById('filterSavedOnly')?.classList.add('active');
+    renderFeed();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  document.getElementById('mobileTabTheme')?.addEventListener('click', () => {
+    toggleTheme();
   });
 
 
