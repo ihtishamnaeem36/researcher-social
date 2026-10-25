@@ -47,7 +47,8 @@ jobs:
       - name: Copy & Rename APK
         run: |
           mkdir -p output
-          find android/app/build/outputs/apk/ -name "*.apk" -exec cp {} output/Folerio.apk \;
+          find android -type f -name "*.apk"
+          find android -type f -name "*.apk" -exec cp -v {} output/Folerio.apk \;
           ls -la output/
 
       - name: Upload APK Artifact
