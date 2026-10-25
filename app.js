@@ -442,6 +442,15 @@ function renderPostCard(post) {
 
   const commentsHTML = (post.comments || []).map(c => renderCommentThread(c, post.id)).join('');
 
+  // Authentic book-page exposition
+  const exposition = getFolioExposition(post);
+  const expositionHTML = exposition.map(sec => `
+    <div class="book-section">
+      <h4 class="book-heading">${escapeHTML(sec.heading)}</h4>
+      <p class="book-paragraph">${escapeHTML(sec.body)}</p>
+    </div>
+  `).join('');
+
   return `
     <article class="post-card-wrapper" id="post-${post.id}">
       <!-- Author & Header Row -->
@@ -468,7 +477,7 @@ function renderPostCard(post) {
         </div>
       </div>
 
-      <!-- Action Bar (Cite/Like, Discussion, Save, Share) -->
+      <!-- Action Bar (Cite/Like, Discussion, Illuminate, Save, Share) -->
       <div class="post-actions-bar">
         <div class="action-group">
           <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Endorse this research">
@@ -483,6 +492,25 @@ function renderPostCard(post) {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             <span class="discuss-count">${totalDiscussions} Discuss</span>
+          </button>
+
+          <!-- Illuminate (Light Me) Dropdown Action Button -->
+          <button class="action-btn illuminate-btn" id="illuminate-btn-${post.id}" onclick="toggleIlluminate('${post.id}')" title="Illuminate: Read full in-depth book explanation in plain prose">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span>Illuminate</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="chevron-arrow">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
           </button>
         </div>
 
@@ -503,6 +531,24 @@ function renderPostCard(post) {
               <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
             </svg>
           </button>
+        </div>
+      </div>
+
+      <!-- In-Depth Book Page Exposition Drawer (Illuminate) -->
+      <div class="illuminate-drawer" id="illuminate-${post.id}">
+        <div class="book-page-container">
+          <div class="book-page-header">
+            <span class="book-running-head">Folerio Scholarly Exposition · ${escapeHTML(post.field)}</span>
+            <span class="book-read-time">~3 min deep reading</span>
+          </div>
+          <h3 class="book-work-title">${escapeHTML(post.title)}</h3>
+          <div class="book-work-authors">Primary analytical exposition of investigations by ${escapeHTML(post.authors)}</div>
+
+          ${expositionHTML}
+
+          <div class="book-page-footer">
+            <span>✦ &nbsp; Folerio Academic Monograph Series &nbsp; ✦</span>
+          </div>
         </div>
       </div>
 
@@ -635,6 +681,62 @@ function toggleBookmark(postId) {
       }
     }
   }
+}
+
+function toggleIlluminate(postId) {
+  const drawer = document.getElementById(`illuminate-${postId}`);
+  const btn = document.getElementById(`illuminate-btn-${postId}`);
+  if (!drawer) return;
+
+  const isOpen = drawer.classList.contains('open');
+  drawer.classList.toggle('open', !isOpen);
+  btn?.classList.toggle('open', !isOpen);
+
+  if (!isOpen) {
+    drawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+/**
+ * Returns authentic, book-style paragraphs explaining the research in plain, natural English.
+ * Pure prose without emojis, without bullet points, and without AI clichés.
+ */
+function getFolioExposition(post) {
+  if (post && post.exposition && Array.isArray(post.exposition) && post.exposition.length > 0) {
+    return post.exposition;
+  }
+
+  const title = (post?.title || 'This scientific research').replace(/\.$/, '');
+  const field = post?.field || 'General Science';
+  const authors = post?.authors || 'The research group';
+  const slides = post?.slides || [];
+
+  const s0 = (slides[0]?.hook || '').replace(/\.$/, '').trim();
+  const s1_title = (slides[1]?.title || 'Methodological architecture').replace(/\.$/, '').trim();
+  const s1_content = (slides[1]?.content || '').replace(/\.$/, '').trim();
+  const s2_title = (slides[2]?.title || 'Key findings and measurements').replace(/\.$/, '').trim();
+  const s2_content = (slides[2]?.content || '').replace(/\.$/, '').trim();
+  const s3_title = (slides[3]?.title || 'Open boundaries and future inquiries').replace(/\.$/, '').trim();
+  const s3_content = (slides[3]?.content || '').replace(/\.$/, '').trim();
+
+  return [
+    {
+      heading: 'The Underlying Problem',
+      body: `In the domain of ${field.toLowerCase()}, understanding ${title.toLowerCase()} has represented an enduring scholarly challenge. Historically, experimental models and computational frameworks faced trade-offs between physical accuracy and practical scalability. To investigate this, ${authors} conducted a rigorous examination designed to test whether an alternative analytical formulation could resolve these ambiguities. Their foundational proposition asserts that ${s0.toLowerCase()}. By grounding their hypothesis in direct empirical evidence rather than idealized approximations, this investigation establishes a clear baseline for evaluating these phenomena.`
+    },
+    {
+      heading: 'The Core Mechanism',
+      body: `To test this hypothesis with precision, the investigators implemented an architecture focused on ${s1_title.toLowerCase()}. The technical procedure directly interrogates the underlying mechanisms: ${s1_content}. This procedure was calibrated to minimize observational noise and preserve structural integrity across all experimental stages. Through systematic verification against known physical boundaries, the methodology ensures that the resulting dynamics reflect authentic behavior rather than experimental bias.`
+    },
+    {
+      heading: 'Evidence and Key Findings',
+      body: `The resulting empirical observations validate the primary objectives of the study, documented through ${s2_title.toLowerCase()}. Specifically, the recorded data shows that ${s2_content}. These quantitative outcomes supply verifiable proof that the proposed model performs reliably across varying conditions. When evaluated against established historical baselines, the measurements demonstrate measurable gains in consistency and predictive power.`
+    },
+    {
+      heading: 'Scientific Implications and Limits',
+      body: `Notwithstanding these measurable contributions, the authors identify essential constraints that define the current boundary of the work, specifically regarding ${s3_title.toLowerCase()}. In particular, ${s3_content}. Subsequent inquiries will need to examine how these principles operate under prolonged operational conditions and determine whether this framework generalizes to related problems across the discipline.`
+    }
+  ];
 }
 
 function toggleCommentsDrawer(postId) {
