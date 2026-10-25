@@ -1,5 +1,5 @@
 /**
- * supabase-client.js — Noesis Central Database Bridge
+ * supabase-client.js — Folerio Central Database Bridge
  * 
  * Instructions to connect Supabase:
  * 1. Create a free project at https://supabase.com
@@ -16,10 +16,10 @@ const PLATFORM_SUPABASE_CONFIG = {
 };
 
 const SupabaseBridge = {
-  STORAGE_KEY_URL: 'noesis_supabase_url',
-  STORAGE_KEY_KEY: 'noesis_supabase_key',
-  STORAGE_KEY_LOCAL_POSTS: 'noesis_local_folios',
-  STORAGE_KEY_INTERACTIONS: 'noesis_user_interactions',
+  STORAGE_KEY_URL: 'folerio_supabase_url',
+  STORAGE_KEY_KEY: 'folerio_supabase_key',
+  STORAGE_KEY_LOCAL_POSTS: 'folerio_local_folios',
+  STORAGE_KEY_INTERACTIONS: 'folerio_user_interactions',
 
   config: {
     url: '',
@@ -29,14 +29,14 @@ const SupabaseBridge = {
 
   init() {
     // Prefer central platform config; fallback to localStorage if set
-    this.config.url = (PLATFORM_SUPABASE_CONFIG.url || localStorage.getItem(this.STORAGE_KEY_URL) || '').trim();
-    this.config.anonKey = (PLATFORM_SUPABASE_CONFIG.anonKey || localStorage.getItem(this.STORAGE_KEY_KEY) || '').trim();
+    this.config.url = (PLATFORM_SUPABASE_CONFIG.url || localStorage.getItem(this.STORAGE_KEY_URL) || localStorage.getItem('noesis_supabase_url') || '').trim();
+    this.config.anonKey = (PLATFORM_SUPABASE_CONFIG.anonKey || localStorage.getItem(this.STORAGE_KEY_KEY) || localStorage.getItem('noesis_supabase_key') || '').trim();
     this.config.isConnected = !!(this.config.url && this.config.anonKey);
 
     if (this.config.isConnected) {
-      console.log('⚡ Noesis: Connected to central Supabase cloud backend.');
+      console.log('⚡ Folerio: Connected to central Supabase cloud backend.');
     } else {
-      console.log('📁 Noesis: Operating in browser LocalStorage mode (offline / demo ready).');
+      console.log('📁 Folerio: Operating in browser LocalStorage mode (offline / demo ready).');
     }
 
     return this.config;

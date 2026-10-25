@@ -1,5 +1,5 @@
 /**
- * app.js — Noesis Core Application Logic
+ * app.js — Folerio Core Application Logic
  * Interactive horizontal carousels, live Folio Studio, sidebar navigation,
  * theme management (dark/light), and intellectual discourse mechanics.
  */
@@ -210,14 +210,14 @@ document.addEventListener('DOMContentLoaded', async () => {
    Theme Management (Dark / Light)
    ========================================================================== */
 function initTheme() {
-  const savedTheme = localStorage.getItem('noesis_theme') || 'dark';
+  const savedTheme = localStorage.getItem('folerio_theme') || localStorage.getItem('noesis_theme') || 'dark';
   applyTheme(savedTheme);
 }
 
 function applyTheme(theme) {
   state.currentTheme = theme;
   document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('noesis_theme', theme);
+  localStorage.setItem('folerio_theme', theme);
 
   const themeIcon = document.getElementById('themeIcon');
   const themeLabel = document.getElementById('themeLabel');
@@ -1048,7 +1048,7 @@ function openShareModal(postId) {
 
   // Social share buttons
   document.getElementById('shareOnXBtn').onclick = () => {
-    const text = encodeURIComponent(`Check out this breakthrough research Folio on Noesis: "${post.title}"\n${url}`);
+    const text = encodeURIComponent(`Check out this breakthrough research Folio on Folerio: "${post.title}"\n${url}`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
 
