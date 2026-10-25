@@ -32,7 +32,10 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Prepare Web Assets
-        run: npm run copy-assets
+        run: |
+          mkdir -p www
+          npm run copy-assets
+          mkdir -p android/app/src/main/assets/public
 
       - name: Copy Assets to Native Android
         run: npx cap copy android
