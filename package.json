@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "copy-assets": "mkdir -p www && cp index.html app.js card-generator.js styles.css papers-data.json primer-data.json supabase-client.js www/",
-    "sync": "npm run copy-assets && npx cap sync",
+    "sync": "npm run copy-assets && npx cap sync android",
     "open:android": "npx cap open android"
   },
   "repository": {
