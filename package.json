@@ -1,0 +1,27 @@
+{
+  "name": "researcher-social",
+  "version": "1.0.0",
+  "description": "> A visual micro-publishing platform designed specifically for researchers, academics, and science enthusiasts. Turn dense, 20-page papers into elegant, bite-sized horizontal carousels with deep-dive technical slides.",
+  "main": "app.js",
+  "scripts": {
+    "copy-assets": "mkdir -p www && cp index.html app.js card-generator.js styles.css papers-data.json primer-data.json supabase-client.js www/",
+    "sync": "npm run copy-assets && npx cap sync",
+    "open:android": "npx cap open android"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ihtishamnaeem36/researcher-social.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ihtishamnaeem36/researcher-social/issues"
+  },
+  "homepage": "https://github.com/ihtishamnaeem36/researcher-social#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  }
+}

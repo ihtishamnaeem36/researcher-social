@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Folerio</string>
+    <string name="title_activity_main">Folerio</string>
+    <string name="package_name">com.folerio.app</string>
+    <string name="custom_url_scheme">com.folerio.app</string>
+</resources>

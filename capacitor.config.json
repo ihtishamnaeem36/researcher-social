@@ -1,0 +1,8 @@
+{
+  "appId": "com.folerio.app",
+  "appName": "Folerio",
+  "webDir": "www",
+  "server": {
+    "cleartext": true
+  }
+}
