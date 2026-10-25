@@ -63,8 +63,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: latest
-          name: "Folerio Android Release (Auto-Syncing)"
+          tag_name: v1.0.0
+          name: "Folerio Android v1.0.0 (Auto-Syncing)"
           body: |
             ### Folerio Standalone Android APK (v1.0.0)
             - **Compatibility:** Android 6.0 (Marshmallow) up to Android 15+
