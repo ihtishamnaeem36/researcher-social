@@ -9,6 +9,8 @@ jobs:
   build:
     name: Build Standalone APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -47,7 +49,6 @@ jobs:
       - name: Copy & Rename APK
         run: |
           mkdir -p output
-          find android -type f -name "*.apk"
           find android -type f -name "*.apk" -exec cp -v {} output/Folerio.apk \;
           ls -la output/
 
@@ -57,3 +58,16 @@ jobs:
           name: Folerio-Android-APK
           path: output/Folerio.apk
           retention-days: 30
+
+      - name: Publish Direct Release APK
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: "Folerio Android Release (Auto-Syncing)"
+          body: |
+            ### Folerio Standalone Android APK (v1.0.0)
+            - **Compatibility:** Android 6.0 (Marshmallow) up to Android 15+
+            - **Auto-Sync:** Connected to live feed (`https://ihtishamnaeem36.github.io/researcher-social`). Any future research folios or updates pushed to GitHub will automatically reflect in the app without reinstalling!
+            - **Direct Download:** Click `Folerio.apk` below to install directly on your phone.
+          files: output/Folerio.apk
