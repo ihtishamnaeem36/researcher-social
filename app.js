@@ -188,6 +188,8 @@ const state = {
   savedPostIds: new Set(['seed-transformer']),
   likedPostIds: new Set(['seed-transformer']),
   currentTheme: 'dark',
+  pageLimit: 15,
+  hasInitializedScroll: false,
   creator: {
     activeSlideIndex: 0,
     selectedTheme: 'obsidian',
@@ -259,13 +261,28 @@ function updateSupabaseStatusIndicator() {
 }
 
 async function loadPosts() {
+  let datasets = [];
+  try {
+    const res = await fetch('papers-data.json');
+    if (res.ok) {
+      datasets = await res.json();
+    }
+  } catch (err) {
+    console.warn('Could not fetch papers-data.json, falling back to local/seed', err);
+  }
+
   const cloudOrLocal = await SupabaseBridge.getPosts();
   if (cloudOrLocal && cloudOrLocal.length > 0) {
-    state.posts = cloudOrLocal;
+    const datasetIds = new Set(datasets.map(d => d.id));
+    const userCreated = cloudOrLocal.filter(p => !datasetIds.has(p.id));
+    state.posts = [...userCreated, ...datasets];
+  } else if (datasets.length > 0) {
+    state.posts = datasets;
   } else {
     state.posts = [...SEED_PAPERS];
-    localStorage.setItem(SupabaseBridge.STORAGE_KEY_LOCAL_POSTS, JSON.stringify(state.posts));
   }
+
+  initInfiniteScroll();
   renderFeed();
 }
 
@@ -277,22 +294,12 @@ function updateSavedBadge() {
 }
 
 /**
- * Render Posts Feed with horizontal swipeable carousels
+ * Render Posts Feed with horizontal swipeable carousels & virtual pagination
  */
 function renderFeed() {
   const container = document.getElementById('postsFeed');
   const emptyState = document.getElementById('emptyFeedState');
   const viewText = document.getElementById('currentViewText');
-
-  if (viewText) {
-    if (state.showSavedOnly) {
-      viewText.textContent = 'Library: Saved Folios';
-    } else if (state.currentTopic !== 'all') {
-      viewText.textContent = `Field: ${state.currentTopic}`;
-    } else {
-      viewText.textContent = 'Dispatch: All Disciplines';
-    }
-  }
 
   let filtered = state.posts.filter(p => {
     // Topic filter
@@ -311,6 +318,19 @@ function renderFeed() {
     return true;
   });
 
+  const totalCount = filtered.length;
+  const showingCount = Math.min(state.pageLimit, totalCount);
+
+  if (viewText) {
+    if (state.showSavedOnly) {
+      viewText.textContent = `Library: ${showingCount} of ${totalCount} Saved Folios`;
+    } else if (state.currentTopic !== 'all') {
+      viewText.textContent = `${state.currentTopic}: Showing ${showingCount} of ${totalCount.toLocaleString()} Folios`;
+    } else {
+      viewText.textContent = `Dispatch: Showing ${showingCount} of ${totalCount.toLocaleString()} Real Breakthrough Folios`;
+    }
+  }
+
   if (filtered.length === 0) {
     container.innerHTML = '';
     emptyState.style.display = 'block';
@@ -318,11 +338,54 @@ function renderFeed() {
   }
 
   emptyState.style.display = 'none';
-  container.innerHTML = filtered.map(post => renderPostCard(post)).join('');
+
+  const visiblePosts = filtered.slice(0, state.pageLimit);
+  const cardsHTML = visiblePosts.map(post => renderPostCard(post)).join('');
+
+  const hasMore = filtered.length > state.pageLimit;
+  const loadMoreHTML = hasMore ? `
+    <div class="feed-load-more" id="feedLoadMoreWrap" style="text-align:center; padding: 2.5rem 0 4rem;">
+      <button class="btn btn-outline" id="loadMoreFoliosBtn" onclick="loadMoreFolios()" style="padding: 0.75rem 2.2rem; font-size: 0.92rem; border-radius: 9999px; background: rgba(56, 189, 248, 0.08); border-color: rgba(56, 189, 248, 0.35);">
+        Load More Research Folios (${filtered.length - state.pageLimit} remaining) &darr;
+      </button>
+    </div>
+  ` : `
+    <div style="text-align:center; padding: 3rem 0; color: var(--text-muted); font-size: 0.86rem; border-top: 1px solid var(--border-subtle); margin-top: 2rem;">
+      ✦ You have reached the research frontier (${filtered.length.toLocaleString()} Folios loaded)
+    </div>
+  `;
+
+  container.innerHTML = cardsHTML + loadMoreHTML;
 
   // Attach carousel scroll listeners & buttons
   attachCarouselEvents();
   updateSavedBadge();
+}
+
+function loadMoreFolios() {
+  state.pageLimit += 15;
+  renderFeed();
+}
+
+function initInfiniteScroll() {
+  if (state.hasInitializedScroll) return;
+  state.hasInitializedScroll = true;
+
+  window.addEventListener('scroll', () => {
+    // Check if scrolled near bottom
+    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 900) {
+      const filteredCount = state.posts.filter(p => {
+        if (state.currentTopic !== 'all' && p.field !== state.currentTopic) return false;
+        if (state.showSavedOnly && !state.savedPostIds.has(p.id)) return false;
+        return true;
+      }).length;
+
+      if (state.pageLimit < filteredCount) {
+        state.pageLimit += 10;
+        renderFeed();
+      }
+    }
+  }, { passive: true });
 }
 
 /**
@@ -952,6 +1015,7 @@ function initEventListeners() {
   function syncTopicSelection(topic) {
     state.currentTopic = topic;
     state.showSavedOnly = false;
+    state.pageLimit = 15;
 
     // Sync pills
     document.querySelectorAll('.topic-pill').forEach(b => {
@@ -1000,6 +1064,7 @@ function initEventListeners() {
   // Search input
   document.getElementById('searchInput')?.addEventListener('input', (e) => {
     state.searchQuery = e.target.value.trim();
+    state.pageLimit = 15;
     renderFeed();
   });
 

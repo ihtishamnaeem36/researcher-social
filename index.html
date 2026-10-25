@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Folerio — The Scholarly Folio & Discovery Network</title>
   <meta name="description" content="A visual intellectual discourse platform for scientists and researchers. Transform complex scientific literature into elegant, swipeable multi-slide Folios.">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M7 6C7 4.9 7.9 4 9 4H20L25 9V26C25 27.1 24.1 28 23 28H9C7.9 28 7 27.1 7 26V6Z' fill='%230f172a' stroke='%2338bdf8' stroke-width='2'/%3E%3Cpath d='M20 4V9H25' stroke='%2338bdf8' stroke-width='2' fill='%2338bdf8' fill-opacity='0.4'/%3E%3Cpath d='M12 23V10H19.5M12 16H17.5' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M6 8C6 6.9 6.9 6 8 6H17L21 10V22C21 23.1 20.1 24 19 24H8C6.9 24 6 23.1 6 22V8Z' fill='%231e293b' stroke='%23818cf8' stroke-width='1.5' stroke-opacity='0.6'/%3E%3Cpath d='M11 5C11 3.9 11.9 3 13 3H22L26 7V25C26 26.1 25.1 27 24 27H13C11.9 27 11 26.1 11 25V5Z' fill='%230f172a' stroke='%2338bdf8' stroke-width='2'/%3E%3Cpath d='M22 3V7H26' stroke='%2338bdf8' stroke-width='2' fill='%2338bdf8' fill-opacity='0.5'/%3E%3Cpath d='M18.5 10.5L21 15L18.5 19.5L16 15Z' fill='%2338bdf8' stroke='%23ffffff' stroke-width='1.2'/%3E%3Ccircle cx='18.5' cy='15' r='1.5' fill='%23ffffff'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -20,26 +20,30 @@
       <div class="sidebar-header">
         <div class="brand" id="brandIdentity">
           <div class="logo-mark">
-            <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="folerioLogoGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
                   <stop offset="0%" stop-color="#38bdf8"/>
-                  <stop offset="100%" stop-color="#818cf8"/>
+                  <stop offset="50%" stop-color="#818cf8"/>
+                  <stop offset="100%" stop-color="#c084fc"/>
                 </linearGradient>
                 <linearGradient id="folerioPaperBg" x1="6" y1="4" x2="26" y2="28" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="rgba(56, 189, 248, 0.18)"/>
-                  <stop offset="100%" stop-color="rgba(99, 102, 241, 0.1)"/>
+                  <stop offset="0%" stop-color="rgba(56, 189, 248, 0.22)"/>
+                  <stop offset="100%" stop-color="rgba(99, 102, 241, 0.12)"/>
                 </linearGradient>
               </defs>
-              <!-- Manuscript Folio Sheet Base with Top-Right Fold Cutout -->
-              <path d="M7 6C7 4.89543 7.89543 4 9 4H20L25 9V26C25 27.1046 24.1046 28 23 28H9C7.89543 28 7 27.1046 7 26V6Z" fill="url(#folerioPaperBg)" stroke="url(#folerioLogoGrad)" stroke-width="1.8" stroke-linejoin="round"/>
-              <!-- Turned Paper Corner -->
-              <path d="M20 4V8C20 8.55228 20.4477 9 21 9H25" stroke="url(#folerioLogoGrad)" stroke-width="1.8" stroke-linejoin="round" fill="rgba(56, 189, 248, 0.35)"/>
-              <!-- Bold Geometric 'F' Monogram inside the Folio Sheet -->
-              <path d="M12 22.5V10H19.5M12 16H17.5" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
-              <!-- Manuscript Text Detail Lines -->
-              <line x1="11.5" y1="7.5" x2="16.5" y2="7.5" stroke="rgba(255, 255, 255, 0.55)" stroke-width="1.2" stroke-linecap="round"/>
-              <line x1="14" y1="24.5" x2="20.5" y2="24.5" stroke="rgba(255, 255, 255, 0.55)" stroke-width="1.2" stroke-linecap="round"/>
+              <!-- Layer 1: Background Research Folio (Depth & Peer Layers) -->
+              <path d="M6 8C6 6.89543 6.89543 6 8 6H17L21 10V22C21 23.1046 20.1046 24 19 24H8C6.89543 24 6 23.1046 6 22V8Z" fill="rgba(129, 140, 248, 0.14)" stroke="url(#folerioLogoGrad)" stroke-width="1.3" stroke-opacity="0.5" stroke-linejoin="round"/>
+              <!-- Layer 2: Foreground Elevated Folio with Precision Corner Fold -->
+              <path d="M11 5C11 3.89543 11.8954 3 13 3H22L26 7V25C26 26.1046 25.1046 27 24 27H13C11.8954 27 11 26.1046 11 25V5Z" fill="url(#folerioPaperBg)" stroke="url(#folerioLogoGrad)" stroke-width="1.8" stroke-linejoin="round"/>
+              <!-- Turned Precision Corner Fold -->
+              <path d="M22 3V6.5C22 6.77614 22.2239 7 22.5 7H26" stroke="url(#folerioLogoGrad)" stroke-width="1.8" stroke-linejoin="round" fill="rgba(56, 189, 248, 0.45)"/>
+              <!-- Prism of Discovery & Central Luminous Spark -->
+              <path d="M18.5 10.5L21.2 15L18.5 19.5L15.8 15Z" fill="url(#folerioLogoGrad)" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/>
+              <circle cx="18.5" cy="15" r="1.5" fill="#ffffff"/>
+              <!-- Architectural Scientific Coordinates -->
+              <line x1="14.5" y1="22.5" x2="22.5" y2="22.5" stroke="rgba(255, 255, 255, 0.5)" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="14.5" y1="24.5" x2="19.5" y2="24.5" stroke="rgba(255, 255, 255, 0.35)" stroke-width="1" stroke-linecap="round"/>
             </svg>
           </div>
           <div class="brand-text">
@@ -115,17 +119,17 @@
             <span class="disc-dot" style="background:#a78bfa;"></span>
             <span>Neuroscience</span>
           </button>
-          <button class="discipline-nav-item" data-topic="Quantum & Physics">
+          <button class="discipline-nav-item" data-topic="Quantum Computing">
             <span class="disc-dot" style="background:#fbbf24;"></span>
-            <span>Quantum & Physics</span>
+            <span>Quantum Computing</span>
           </button>
-          <button class="discipline-nav-item" data-topic="Medicine & Health">
-            <span class="disc-dot" style="background:#f43f5e;"></span>
-            <span>Medicine & Health</span>
+          <button class="discipline-nav-item" data-topic="Astrophysics & Space">
+            <span class="disc-dot" style="background:#c084fc;"></span>
+            <span>Astrophysics & Space</span>
           </button>
-          <button class="discipline-nav-item" data-topic="Climate Science">
-            <span class="disc-dot" style="background:#10b981;"></span>
-            <span>Climate Science</span>
+          <button class="discipline-nav-item" data-topic="Materials Science">
+            <span class="disc-dot" style="background:#f59e0b;"></span>
+            <span>Materials Science</span>
           </button>
         </div>
       </div>
@@ -202,9 +206,9 @@
             <button class="topic-pill" data-topic="AI & Machine Learning">⚡ AI & Machine Learning</button>
             <button class="topic-pill" data-topic="Biotech & Genetics">🧬 Biotech & Genetics</button>
             <button class="topic-pill" data-topic="Neuroscience">🧠 Neuroscience</button>
-            <button class="topic-pill" data-topic="Quantum & Physics">⚛️ Quantum & Physics</button>
-            <button class="topic-pill" data-topic="Medicine & Health">🩺 Medicine & Health</button>
-            <button class="topic-pill" data-topic="Climate Science">🌍 Climate Science</button>
+            <button class="topic-pill" data-topic="Quantum Computing">⚛️ Quantum Computing</button>
+            <button class="topic-pill" data-topic="Astrophysics & Space">🔭 Astrophysics & Space</button>
+            <button class="topic-pill" data-topic="Materials Science">🔬 Materials Science</button>
           </div>
 
           <div class="filter-toggles">
