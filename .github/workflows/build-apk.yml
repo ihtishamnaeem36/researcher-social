@@ -31,14 +31,13 @@ jobs:
       - name: Make Gradle Executable
         run: chmod +x android/gradlew
 
-      - name: Prepare Web Assets
+      - name: Prepare Web Assets & Sync to Android
         run: |
           mkdir -p www
           npm run copy-assets
           mkdir -p android/app/src/main/assets/public
-
-      - name: Copy Assets to Native Android
-        run: npx cap copy android
+          cp -r www/* android/app/src/main/assets/public/
+          cp capacitor.config.json android/app/src/main/assets/capacitor.config.json
 
       - name: Build Android APK
         run: |
