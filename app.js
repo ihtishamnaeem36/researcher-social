@@ -182,6 +182,8 @@ const FOLIO_ARCHETYPES = {
 // App State
 const state = {
   posts: [],
+  primerPosts: [],
+  feedMode: 'frontier', // 'frontier' | 'primer'
   currentTopic: 'all',
   searchQuery: '',
   showSavedOnly: false,
@@ -280,6 +282,15 @@ async function loadPosts() {
     console.warn('Could not fetch papers-data.json, falling back to local/seed', err);
   }
 
+  try {
+    const pRes = await fetch('primer-data.json');
+    if (pRes.ok) {
+      state.primerPosts = await pRes.json();
+    }
+  } catch (err) {
+    console.warn('Could not fetch primer-data.json', err);
+  }
+
   const cloudOrLocal = await SupabaseBridge.getPosts();
   if (cloudOrLocal && cloudOrLocal.length > 0) {
     const datasetIds = new Set(datasets.map(d => d.id));
@@ -314,7 +325,9 @@ function renderFeed() {
   const emptyState = document.getElementById('emptyFeedState');
   const viewText = document.getElementById('currentViewText');
 
-  let filtered = state.posts.filter(p => {
+  const activePool = state.feedMode === 'primer' ? state.primerPosts : state.posts;
+
+  let filtered = activePool.filter(p => {
     // Topic filter
     if (state.currentTopic !== 'all' && p.field !== state.currentTopic) return false;
     // Saved filter
@@ -337,6 +350,10 @@ function renderFeed() {
   if (viewText) {
     if (state.showSavedOnly) {
       viewText.textContent = `Library: ${showingCount} of ${totalCount} Saved Folios`;
+    } else if (state.feedMode === 'primer') {
+      viewText.textContent = state.currentTopic !== 'all'
+        ? `Foundations: ${showingCount} of ${totalCount} Core Basics (${state.currentTopic})`
+        : `Foundations: First-Principles & Core Basics (${totalCount} Folios)`;
     } else if (state.currentTopic !== 'all') {
       viewText.textContent = `${state.currentTopic}: Showing ${showingCount} of ${totalCount.toLocaleString()} Folios`;
     } else {
@@ -414,8 +431,8 @@ function renderPostCard(post) {
       return `
         <div class="post-slide slide-type-hero" data-index="${idx}">
           <div class="slide-badge-row">
-            <span class="slide-label">● Core Thesis & Breakthrough</span>
-            <span class="post-tag">${post.field}</span>
+            <span class="slide-label">${post.isPrimer ? '🌱 Foundation & Core Principles' : '● Core Thesis & Breakthrough'}</span>
+            <span class="post-tag ${post.isPrimer ? 'primer-badge' : ''}">${post.isPrimer ? '🌱 ' + post.field : post.field}</span>
           </div>
           <div>
             <h2 class="paper-hero-title">${post.title}</h2>
@@ -428,12 +445,14 @@ function renderPostCard(post) {
         </div>
       `;
     } else {
-      const stepTags = ['[01] Thesis', '[02] Methodology & Specs', '[03] Quantitative Evidence', '[04] Critical Frontier'];
+      const stepTags = post.isPrimer
+        ? ['[01] Core Concept', '[02] First Principles', '[03] Mechanism & Step-by-Step', '[04] Modern Applications']
+        : ['[01] Thesis', '[02] Methodology & Specs', '[03] Quantitative Evidence', '[04] Critical Frontier'];
       return `
         <div class="post-slide slide-type-dive" data-index="${idx}">
           <div class="slide-badge-row">
             <span class="dive-section-tag">${stepTags[idx] || '[Deep Dive]'}</span>
-            <span class="post-tag">${post.field}</span>
+            <span class="post-tag ${post.isPrimer ? 'primer-badge' : ''}">${post.isPrimer ? '🌱 ' + post.field : post.field}</span>
           </div>
           <div>
             <h3 class="dive-heading">${s.title || 'In-Depth Breakdown'}</h3>
@@ -442,7 +461,7 @@ function renderPostCard(post) {
             </div>
           </div>
           <div class="slide-footer-row">
-            <span>${idx === slideCount - 1 && post.doi ? `<a href="${post.doi}" target="_blank" rel="noreferrer">Open Primary Source (${post.doi.slice(0, 24)}...)</a>` : 'Slide ' + (idx + 1) + ' of ' + slideCount}</span>
+            <span>${idx === slideCount - 1 && post.doi ? `<a href="${post.doi}" target="_blank" rel="noreferrer">Open Primary Source (${post.doi.slice(0, 24)}...)</a>` : (post.isPrimer ? '📘 Primer Slide ' : 'Slide ') + (idx + 1) + ' of ' + slideCount}</span>
             <span>${idx < slideCount - 1 ? 'Swipe &rarr;' : 'End of Folio'}</span>
           </div>
         </div>
@@ -609,18 +628,24 @@ function attachCarouselEvents() {
       }
     }, { passive: true });
 
-    // Arrow button controls
+    // Arrow button controls with exact slide alignment
     prevBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
-      track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
+      const slideWidth = track.clientWidth || 1;
+      const currentIdx = Math.round(track.scrollLeft / slideWidth);
+      const targetIdx = Math.max(0, currentIdx - 1);
+      track.scrollTo({ left: targetIdx * slideWidth, behavior: 'smooth' });
     });
 
     nextBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
-      track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
+      const slideWidth = track.clientWidth || 1;
+      const currentIdx = Math.round(track.scrollLeft / slideWidth);
+      const targetIdx = Math.min(dots.length - 1, currentIdx + 1);
+      track.scrollTo({ left: targetIdx * slideWidth, behavior: 'smooth' });
     });
 
-    // Click on dots to jump
+    // Click on dots to jump directly
     dots.forEach((dot, idx) => {
       dot.addEventListener('click', () => {
         track.scrollTo({ left: track.clientWidth * idx, behavior: 'smooth' });
@@ -628,14 +653,7 @@ function attachCarouselEvents() {
     });
 
     // Touch gesture support for mobile / tablet + Instagram Double-Tap to Like
-    let startX = 0;
-    let isDragging = false;
     let lastTapTime = 0;
-
-    track.addEventListener('touchstart', (e) => {
-      startX = e.touches[0].clientX;
-      isDragging = true;
-    }, { passive: true });
 
     track.addEventListener('touchend', (e) => {
       // Check for Instagram Double-Tap to Like
@@ -648,17 +666,7 @@ function attachCarouselEvents() {
         }
       }
       lastTapTime = now;
-
-      if (!isDragging) return;
-      isDragging = false;
-      const endX = e.changedTouches[0].clientX;
-      const diff = startX - endX;
-
-      if (diff > 45) {
-        track.scrollBy({ left: track.clientWidth, behavior: 'smooth' });
-      } else if (diff < -45) {
-        track.scrollBy({ left: -track.clientWidth, behavior: 'smooth' });
-      }
+      // Hardware-accelerated CSS scroll-snap glides natively at 120Hz/60Hz without JS fight
     }, { passive: true });
   });
 }
@@ -1333,15 +1341,54 @@ function initEventListeners() {
       b.classList.toggle('active', b.dataset.topic === topic);
     });
     // Sync nav links
-    document.getElementById('navFeedBtn')?.classList.add('active');
+    if (state.feedMode === 'primer') {
+      document.getElementById('navPrimerBtn')?.classList.add('active');
+      document.getElementById('navFeedBtn')?.classList.remove('active');
+    } else {
+      document.getElementById('navFeedBtn')?.classList.add('active');
+      document.getElementById('navPrimerBtn')?.classList.remove('active');
+    }
     document.getElementById('navSavedBtn')?.classList.remove('active');
     document.getElementById('filterSavedOnly')?.classList.remove('active');
 
     renderFeed();
   }
 
+  // Feed Mode Switcher (Frontier Research vs Foundations 101)
+  function setFeedMode(mode) {
+    state.feedMode = mode;
+    state.pageLimit = 15;
+    state.showSavedOnly = false;
+
+    const isPrimer = mode === 'primer';
+    document.getElementById('modeFrontierBtn')?.classList.toggle('active', !isPrimer);
+    document.getElementById('modePrimerBtn')?.classList.toggle('active', isPrimer);
+    document.getElementById('navPrimerBtn')?.classList.toggle('active', isPrimer);
+    document.getElementById('navFeedBtn')?.classList.toggle('active', !isPrimer);
+    document.getElementById('navSavedBtn')?.classList.remove('active');
+    document.getElementById('filterSavedOnly')?.classList.remove('active');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    renderFeed();
+  }
+
+  document.getElementById('modeFrontierBtn')?.addEventListener('click', () => {
+    setFeedMode('frontier');
+  });
+
+  document.getElementById('modePrimerBtn')?.addEventListener('click', () => {
+    setFeedMode('primer');
+  });
+
+  // Sidebar Nav: Foundations (Basics)
+  document.getElementById('navPrimerBtn')?.addEventListener('click', () => {
+    setFeedMode('primer');
+    document.getElementById('sidebarNav')?.classList.remove('mobile-open');
+  });
+
   // Sidebar Nav: Dispatch Feed
   document.getElementById('navFeedBtn')?.addEventListener('click', () => {
+    setFeedMode('frontier');
     syncTopicSelection('all');
   });
 
@@ -1350,6 +1397,7 @@ function initEventListeners() {
     state.showSavedOnly = true;
     document.getElementById('navSavedBtn')?.classList.add('active');
     document.getElementById('navFeedBtn')?.classList.remove('active');
+    document.getElementById('navPrimerBtn')?.classList.remove('active');
     document.getElementById('filterSavedOnly')?.classList.add('active');
     renderFeed();
   });
@@ -1359,7 +1407,16 @@ function initEventListeners() {
     state.showSavedOnly = !state.showSavedOnly;
     e.currentTarget.classList.toggle('active', state.showSavedOnly);
     document.getElementById('navSavedBtn')?.classList.toggle('active', state.showSavedOnly);
-    document.getElementById('navFeedBtn')?.classList.toggle('active', !state.showSavedOnly);
+    if (!state.showSavedOnly) {
+      if (state.feedMode === 'primer') {
+        document.getElementById('navPrimerBtn')?.classList.add('active');
+      } else {
+        document.getElementById('navFeedBtn')?.classList.add('active');
+      }
+    } else {
+      document.getElementById('navFeedBtn')?.classList.remove('active');
+      document.getElementById('navPrimerBtn')?.classList.remove('active');
+    }
     renderFeed();
   });
 
