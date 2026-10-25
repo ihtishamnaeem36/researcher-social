@@ -3,6 +3,8 @@
   "appName": "Folerio",
   "webDir": "www",
   "server": {
-    "cleartext": true
+    "url": "https://ihtishamnaeem36.github.io/researcher-social",
+    "cleartext": true,
+    "androidScheme": "https"
   }
 }
