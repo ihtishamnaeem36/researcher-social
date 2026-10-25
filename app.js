@@ -699,43 +699,189 @@ function toggleIlluminate(postId) {
 
 /**
  * Returns authentic, book-style paragraphs explaining the research in plain, natural English.
- * Pure prose without emojis, without bullet points, and without AI clichés.
+ * Pure prose without emojis, without bullet points, and without repetitive clichés.
  */
 function getFolioExposition(post) {
   if (post && post.exposition && Array.isArray(post.exposition) && post.exposition.length > 0) {
     return post.exposition;
   }
 
-  const title = (post?.title || 'This scientific research').replace(/\.$/, '');
+  const title = (post?.title || 'This scientific research').replace(/\.$/, '').trim();
   const field = post?.field || 'General Science';
-  const authors = post?.authors || 'The research group';
+  const rawAuthors = post?.authors || 'The research group';
+  const cleanAuth = rawAuthors.replace(/\s+et\s+al\..*$/i, '').split(',').map(s => s.trim()).filter(Boolean);
+  const authors = cleanAuth.length <= 1 
+    ? (cleanAuth[0] ? `${cleanAuth[0]} and colleagues` : 'The authors')
+    : (cleanAuth.length === 2 ? `${cleanAuth[0]} and ${cleanAuth[1]}` : `${cleanAuth[0]}, ${cleanAuth[1]}, and colleagues`);
+
   const slides = post?.slides || [];
 
-  const s0 = (slides[0]?.hook || '').replace(/\.$/, '').trim();
-  const s1_title = (slides[1]?.title || 'Methodological architecture').replace(/\.$/, '').trim();
-  const s1_content = (slides[1]?.content || '').replace(/\.$/, '').trim();
-  const s2_title = (slides[2]?.title || 'Key findings and measurements').replace(/\.$/, '').trim();
-  const s2_content = (slides[2]?.content || '').replace(/\.$/, '').trim();
-  const s3_title = (slides[3]?.title || 'Open boundaries and future inquiries').replace(/\.$/, '').trim();
-  const s3_content = (slides[3]?.content || '').replace(/\.$/, '').trim();
+  const deFirstPerson = (txt) => {
+    if (!txt) return '';
+    return txt.trim()
+      .replace(/\bIn this paper, we\b/g, 'In this work, the investigators')
+      .replace(/\bIn this work, we\b/g, 'In this study, the authors')
+      .replace(/\bHere, we\b/g, 'Here, the research team')
+      .replace(/\bWe establish\b/g, 'The authors establish')
+      .replace(/\bWe propose\b/g, 'The investigators propose')
+      .replace(/\bWe introduce\b/g, 'The study introduces')
+      .replace(/\bWe develop\b/g, 'The research team develops')
+      .replace(/\bWe demonstrate\b/g, 'The findings demonstrate')
+      .replace(/\bWe show\b/g, 'The analysis shows')
+      .replace(/\bWe find\b/g, 'The authors find')
+      .replace(/\bWe observe\b/g, 'The data reveals')
+      .replace(/\bWe present\b/g, 'The authors present')
+      .replace(/\bWe prove\b/g, 'The team proves')
+      .replace(/\bwe establish\b/g, 'the authors establish')
+      .replace(/\bwe propose\b/g, 'the investigators propose')
+      .replace(/\bwe introduce\b/g, 'the study introduces')
+      .replace(/\bwe develop\b/g, 'the research team develops')
+      .replace(/\bwe demonstrate\b/g, 'the findings demonstrate')
+      .replace(/\bwe show\b/g, 'the analysis shows')
+      .replace(/\bwe find\b/g, 'the authors find')
+      .replace(/\bwe observe\b/g, 'the data reveals')
+      .replace(/\bwe present\b/g, 'the authors present')
+      .replace(/\bwe prove\b/g, 'the team proves')
+      .replace(/\bour\b/g, 'their')
+      .replace(/\bOur\b/g, 'Their');
+  };
+
+  const ensurePeriod = (s) => {
+    s = (s || '').trim();
+    if (!s) return '';
+    return /[.!?]$/.test(s) ? s : s + '.';
+  };
+
+  let s0 = deFirstPerson(slides[0]?.hook || '').replace(/\.$/, '').trim();
+  if (s0 && !s0.startsWith('AI') && !s0.startsWith('DNA') && !s0.startsWith('RNA')) {
+    s0 = s0.charAt(0).toLowerCase() + s0.slice(1);
+  }
+  s0 = ensurePeriod(s0);
+
+  const s1 = ensurePeriod(deFirstPerson(slides[1]?.content || ''));
+  const s2 = ensurePeriod(deFirstPerson(slides[2]?.content || ''));
+  const s3 = ensurePeriod(deFirstPerson(slides[3]?.content || ''));
+
+  // Deterministic seed based on title characters for stable variety
+  const seed = (title || 'science').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+
+  const fieldIntros = {
+    'AI & Machine Learning': [
+      'Training autonomous models to generalize reliably across unseen physical or computational environments presents a persistent challenge in computer science.',
+      'A central problem in modern machine intelligence is bridging the gap between high-dimensional statistical representations and verifiable physical reasoning.',
+      'Deep learning architectures frequently achieve state-of-the-art results on curated benchmarks while remaining vulnerable to sudden distribution shifts.',
+      'Scaling autonomous decision-making systems introduces an acute tension between computational latency and policy robustness in dynamic environments.'
+    ],
+    'Biotech & Genetics': [
+      'Cellular regulation and genetic circuits operate in fundamentally noisy biochemical environments, confounding straightforward analytical predictions.',
+      'Translating complex genomic alterations into predictable phenotypic responses remains one of the most formidable hurdles in molecular medicine.',
+      'Biological networks achieve operational resilience through dense feedback loops, making the isolation of individual causative pathways remarkably difficult.',
+      'In synthetic biology, designing predictable genetic logic gates requires accounting for unpredictable molecular competition and metabolic burden.'
+    ],
+    'Neuroscience': [
+      'Mapping how coordinated neural populations generate unified cognitive behaviors requires observing activity across vastly disparate spatial and temporal scales.',
+      'A foundational puzzle in neuroscience is how synaptic circuits preserve stable long-term memories despite continuous molecular turnover and physiological drift.',
+      'Investigating cortical computation has historically been limited by the difficulty of recording dense neuronal ensembles without disrupting delicate local microcircuits.',
+      'Understanding how sensory information is parsed and synthesized across divergent brain regions demands frameworks that account for both localized modularity and global synchrony.'
+    ],
+    'Quantum Computing': [
+      'Preserving quantum coherence against destructive environmental decoherence remains the defining obstacle toward practical, fault-tolerant quantum hardware.',
+      'Analyzing quantum many-body systems near critical phase boundaries is fundamentally constrained by the exponential growth of Hilbert space dimensions.',
+      'A primary bottleneck in quantum communication is ensuring operational security in the presence of channel loss, thermal noise, and imperfect detectors.',
+      'Characterizing non-equilibrium states in strongly coupled light-matter architectures demands mathematical tools that reach beyond idealized thermodynamic approximations.'
+    ],
+    'Astrophysics': [
+      'Interpreting astronomical observations across cosmological distances requires disentangling faint galactic signatures from pervasive foreground radiation and dust.',
+      'Reconstructing the evolutionary history of early galaxies depends on computational simulations that must bridge extreme physical scales from stellar cores to cosmic webs.',
+      'Observational astrophysics routinely confronts the challenge of sparse, irregular sampling when monitoring transient, high-energy cosmic explosions.',
+      'Constraining the physical properties of dark matter halos and interstellar magnetic fields requires observational precision at the edge of current sensor limits.'
+    ],
+    'Astrophysics & Space': [
+      'Interpreting astronomical observations across cosmological distances requires disentangling faint galactic signatures from pervasive foreground radiation and dust.',
+      'Reconstructing the evolutionary history of early galaxies depends on computational simulations that must bridge extreme physical scales from stellar cores to cosmic webs.',
+      'Observational astrophysics routinely confronts the challenge of sparse, irregular sampling when monitoring transient, high-energy cosmic explosions.',
+      'Constraining the physical properties of dark matter halos and interstellar magnetic fields requires observational precision at the edge of current sensor limits.'
+    ],
+    'Materials Science': [
+      'Synthesizing advanced functional materials with bespoke electronic and mechanical properties is often thwarted by nanoscale structural defects and grain boundaries.',
+      'Probing ultrafast non-equilibrium transitions in condensed matter requires tracking atomic lattice movements on sub-picosecond timescales.',
+      'Developing next-generation energy storage materials demands resolving the chronic conflict between high ionic conductivity and long-term chemical stability.',
+      'Characterizing light-driven phase transitions in strongly correlated electron systems has long been complicated by overlapping transient optical signatures.'
+    ]
+  };
+
+  const defaultIntros = [
+    'A central objective across modern empirical research is isolating governing physical principles amid complex environmental interference.',
+    'Scientific progress often depends on re-evaluating foundational assumptions when anomalous measurements challenge existing analytical models.'
+  ];
+
+  const pool = fieldIntros[field] || defaultIntros;
+  const contextSentence = pool[seed % pool.length];
+
+  const p1Templates = [
+    `${contextSentence} In this context, ${authors} examine ${title}. The investigation establishes that ${s0} By grounding their findings in verifiable evidence, the authors provide a principled foundation for evaluating these phenomena.`,
+    `${contextSentence} To clarify these dynamics, ${authors} undertake a targeted inquiry titled ${title}. Their analysis centers on a direct observation: ${s0} This formulation offers a coherent framework that reconciles experimental observations with broader physical principles.`,
+    `${contextSentence} Addressing this longstanding problem, ${authors} present ${title}. The authors demonstrate that ${s0} This work supplies concrete clarity where prior models were forced to rely on unverified assumptions.`,
+    `${contextSentence} In their recent investigation, ${title}, ${authors} reconsider this question from first principles. Central to their study is the finding that ${s0} This approach establishes a transparent analytical baseline for researchers working across the field.`
+  ];
+
+  const methodOpeners = [
+    'To systematically address this problem, the research team formulated a specialized methodological architecture.',
+    'At the core of the technical procedure lies an experimental and analytical framework designed to isolate the governing dynamics.',
+    'Rather than relying on broad heuristic approximations, the authors implemented a targeted operational workflow.',
+    'The experimental strategy focuses directly on dissecting the underlying physical and structural mechanisms.',
+    'To test these principles with empirical rigor, the investigators calibrated a dedicated multi-stage protocol.',
+    'Methodologically, the study balances high-resolution measurement with stringent baseline controls.'
+  ];
+
+  const methodClosers = [
+    'This setup allows the investigators to isolate governing variables with high fidelity, ensuring that the resulting signals reflect authentic physical behavior rather than experimental artifacts.',
+    'By maintaining strict operational controls throughout, the workflow yields a high signal-to-noise ratio and provides a reliable basis for comparison.',
+    'This structured formulation enables the researchers to probe dynamic parameter regimes that traditional approaches were unable to resolve.',
+    'Through this systematic separation of variables, the authors eliminate the confounding influences that previously clouded interpretation.'
+  ];
+
+  const resultsOpeners = [
+    'The resulting empirical measurements provide decisive verification of the system\'s behavior.',
+    'When evaluated against standard performance baselines, the collected data revealed clear, reproducible patterns.',
+    'Direct observations from these benchmark trials corroborated the foundational propositions of the work.',
+    'The quantitative outcomes recorded during testing demonstrate measurable improvements across key parameters.',
+    'A systematic review of the experimental outputs reveals compelling empirical support for the formulation.',
+    'The recorded data points to several distinct findings that validate the researchers\' central claims.'
+  ];
+
+  const resultsClosers = [
+    'Compared with historical baselines, these metrics demonstrate consistent predictive reliability and provide tangible proof that the underlying architecture functions as intended.',
+    'These findings confirm that the observed improvements remain statistically significant across distinct operational regimes.',
+    'The coherence of these quantitative results validates the core theoretical predictions without requiring post-hoc parameter adjustments.',
+    'Crucially, the empirical gains were achieved without introducing secondary instabilities in related performance metrics.'
+  ];
+
+  const critiqueOpeners = [
+    'While these findings mark a notable advance, critical operational boundaries remain to be charted.',
+    'Every scientific milestone defines new questions, and this framework introduces distinct trade-offs.',
+    'The authors explicitly identify several operational constraints that bound the current scope of the work.',
+    'Despite the strength of these empirical demonstrations, several foundational questions require further exploration.',
+    'Translating these findings into broader practical applications will depend on navigating specific physical boundaries.'
+  ];
+
+  const critiqueClosers = [
+    'Future research will need to determine how these principles hold under extended operational conditions and whether the framework can be generalized to broader problems across the field.',
+    'Addressing these lingering questions will be vital for assessing whether this methodology can transition from controlled environments to complex real-world settings.',
+    'Subsequent investigations will likely focus on relaxing these assumptions to accommodate non-ideal, noise-heavy environments.',
+    'As measurement tools continue to advance, probing these remaining edge cases will provide deeper clarity into the limits of the system.'
+  ];
+
+  const p1 = p1Templates[(seed * 3) % p1Templates.length];
+  const p2 = `${methodOpeners[(seed * 7) % methodOpeners.length]} ${s1} ${methodClosers[(seed * 11) % methodClosers.length]}`;
+  const p3 = `${resultsOpeners[(seed * 13) % resultsOpeners.length]} ${s2} ${resultsClosers[(seed * 17) % resultsClosers.length]}`;
+  const p4 = `${critiqueOpeners[(seed * 19) % critiqueOpeners.length]} ${s3} ${critiqueClosers[(seed * 23) % critiqueClosers.length]}`;
 
   return [
-    {
-      heading: 'The Underlying Problem',
-      body: `In the domain of ${field.toLowerCase()}, understanding ${title.toLowerCase()} has represented an enduring scholarly challenge. Historically, experimental models and computational frameworks faced trade-offs between physical accuracy and practical scalability. To investigate this, ${authors} conducted a rigorous examination designed to test whether an alternative analytical formulation could resolve these ambiguities. Their foundational proposition asserts that ${s0.toLowerCase()}. By grounding their hypothesis in direct empirical evidence rather than idealized approximations, this investigation establishes a clear baseline for evaluating these phenomena.`
-    },
-    {
-      heading: 'The Core Mechanism',
-      body: `To test this hypothesis with precision, the investigators implemented an architecture focused on ${s1_title.toLowerCase()}. The technical procedure directly interrogates the underlying mechanisms: ${s1_content}. This procedure was calibrated to minimize observational noise and preserve structural integrity across all experimental stages. Through systematic verification against known physical boundaries, the methodology ensures that the resulting dynamics reflect authentic behavior rather than experimental bias.`
-    },
-    {
-      heading: 'Evidence and Key Findings',
-      body: `The resulting empirical observations validate the primary objectives of the study, documented through ${s2_title.toLowerCase()}. Specifically, the recorded data shows that ${s2_content}. These quantitative outcomes supply verifiable proof that the proposed model performs reliably across varying conditions. When evaluated against established historical baselines, the measurements demonstrate measurable gains in consistency and predictive power.`
-    },
-    {
-      heading: 'Scientific Implications and Limits',
-      body: `Notwithstanding these measurable contributions, the authors identify essential constraints that define the current boundary of the work, specifically regarding ${s3_title.toLowerCase()}. In particular, ${s3_content}. Subsequent inquiries will need to examine how these principles operate under prolonged operational conditions and determine whether this framework generalizes to related problems across the discipline.`
-    }
+    { heading: 'The Underlying Problem', body: p1 },
+    { heading: 'The Core Mechanism', body: p2 },
+    { heading: 'Evidence and Key Findings', body: p3 },
+    { heading: 'Scientific Implications and Limits', body: p4 }
   ];
 }
 
