@@ -407,8 +407,11 @@
         </button>
 
         <button class="mobile-nav-tab" id="mobileTabAccount" data-tab="account" aria-label="Scholar Account">
-          <div class="mobile-user-avatar-wrap" id="mobileAccountAvatarWrap">
-            <span class="mobile-avatar-emoji" id="mobileAccountEmoji">👻</span>
+          <div class="mobile-nav-icon-badge-wrap" id="mobileAccountAvatarWrap">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
           </div>
           <span class="mobile-nav-label" id="mobileAccountLabel">Account</span>
         </button>
@@ -589,13 +592,30 @@
 
         <div class="share-actions-grid">
           <button class="share-option-btn" id="shareOnXBtn">
-            <span>Share on X / Academic Twitter</span>
+            <span>Share on X / Twitter</span>
           </button>
           <button class="share-option-btn" id="shareOnLinkedInBtn">
             <span>Share on LinkedIn</span>
           </button>
           <button class="share-option-btn" id="downloadCurrentCardBtn">
             <span>Download Slide PNG</span>
+          </button>
+        </div>
+
+        <!-- 1-Click Academic Citation Formatter (APA, BibTeX, Nature, MLA) -->
+        <div class="share-field" style="margin-top: 1.25rem;">
+          <label>Academic Citation (1-Click Copy)</label>
+          <div class="citation-tabs-strip">
+            <button class="citation-tab active" data-fmt="apa">APA 7th</button>
+            <button class="citation-tab" data-fmt="bibtex">BibTeX</button>
+            <button class="citation-tab" data-fmt="nature">Nature</button>
+            <button class="citation-tab" data-fmt="mla">MLA 9th</button>
+          </div>
+          <div class="citation-preview-card" id="citationPreviewBox">
+            <!-- Dynamically populated by renderCitationPreview() in app.js -->
+          </div>
+          <button class="btn btn-outline btn-sm" id="copyCitationBtn" style="width: 100%; margin-top: 0.6rem;">
+            📋 Copy Citation to Clipboard
           </button>
         </div>
       </div>

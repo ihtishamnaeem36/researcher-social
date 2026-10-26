@@ -4000,6 +4000,257 @@ input:focus, select:focus, textarea:focus {
   border-color: #cbd5e1;
 }
 
+/* ==========================================================================
+   Ghost Scholar Profile Redesign (Large circle avatar with Ghost name)
+   ========================================================================== */
+.ghost-profile-card {
+  text-align: center;
+  padding: 2.25rem 1.5rem 1.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.ghost-profile-card::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.ghost-avatar-circle {
+  width: 105px;
+  height: 105px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(56, 189, 248, 0.22), rgba(15, 23, 42, 0.9));
+  border: 2px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 28px rgba(56, 189, 248, 0.25), inset 0 2px 8px rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+.ghost-emoji-face {
+  font-size: 3.4rem;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+  animation: ghostFloat 3s ease-in-out infinite alternate;
+}
+@keyframes ghostFloat {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
+}
+.ghost-profile-name {
+  font-family: var(--font-sans);
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+}
+.ghost-profile-handle {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-bottom: 0.9rem;
+}
+.ghost-profile-bio {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  max-width: 440px;
+  margin: 0 0 1.5rem;
+}
+.ghost-auth-actions {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 0.85rem;
+}
+.btn-auth-lg {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+}
+.btn-demo-scholar {
+  width: 100%;
+  max-width: 360px;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px dashed rgba(56, 189, 248, 0.35);
+  color: var(--accent-cyan);
+  border-radius: var(--radius-full);
+  padding: 0.65rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-bottom: 1.5rem;
+  transition: all var(--transition-fast);
+}
+.btn-demo-scholar:hover {
+  background: rgba(56, 189, 248, 0.16);
+  border-style: solid;
+}
+.ghost-benefits-box {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-surface-elevated, #0d121c);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  text-align: left;
+  margin-bottom: 1.75rem;
+}
+.benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.benefit-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.benefit-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.benefit-text strong {
+  font-size: 0.86rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.benefit-text span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Segmented Story Progress Bars (Instagram Stories / TikTok Style)
+   ========================================================================== */
+.slide-story-progress {
+  display: flex;
+  gap: 4px;
+  padding: 0.45rem 0.85rem 0.2rem;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.story-progress-bar {
+  flex: 1;
+  height: 2.5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+.story-progress-bar.active {
+  background: var(--accent-cyan, #38bdf8);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+/* Estimated Reading Time Badge */
+.reading-time-badge {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.18rem 0.5rem;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Audio Narration (Listen to Folio) Button */
+.audio-listen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: var(--accent-cyan);
+  padding: 0.32rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.audio-listen-btn:hover {
+  background: rgba(56, 189, 248, 0.18);
+}
+.audio-listen-btn.speaking-wave {
+  background: var(--accent-cyan);
+  color: #030712;
+  animation: audioPulse 1s infinite alternate;
+}
+@keyframes audioPulse {
+  from { box-shadow: 0 0 4px rgba(56, 189, 248, 0.4); }
+  to { box-shadow: 0 0 16px rgba(56, 189, 248, 0.85); }
+}
+
+/* ==========================================================================
+   Academic Citation Formatter
+   ========================================================================== */
+.citation-tabs-strip {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+.citation-tab {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.35rem 0.45rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.citation-tab.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+.citation-preview-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+
 
 
 

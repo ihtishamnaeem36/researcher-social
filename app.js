@@ -588,6 +588,10 @@ function renderPostCard(post) {
 
       <!-- Horizontal Multi-Slide Carousel (Clean, no arrow buttons, gesture + dots navigation) -->
       <div class="carousel-container" data-post-id="${post.id}">
+        <!-- Segmented Story Progress Bar (Instagram / TikTok Stories Style) -->
+        <div class="slide-story-progress" id="story-progress-${post.id}">
+          ${post.slides.map((_, i) => `<div class="story-progress-bar ${i === 0 ? 'active' : ''}"></div>`).join('')}
+        </div>
         <div class="carousel-counter-badge" id="counter-${post.id}">1/${post.slides.length}</div>
         <div class="carousel-track">
           ${slidesHTML}
@@ -597,7 +601,7 @@ function renderPostCard(post) {
         </div>
       </div>
 
-      <!-- Action Bar (Cite/Like, Discussion, Illuminate, Save, Share - Minimalist & Spacious) -->
+      <!-- Action Bar (Cite/Like, Discussion, Illuminate, Audio Listen, Save, Share) -->
       <div class="post-actions-bar">
         <div class="action-group">
           <!-- Hold Heart to Take Clean Screenshot(s) -->
@@ -614,6 +618,15 @@ function renderPostCard(post) {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             <span class="discuss-count">${totalDiscussions > 0 ? totalDiscussions : ''}</span>
+          </button>
+
+          <!-- Audio Narration Button (Listen to Folio via Native Speech Synthesis) -->
+          <button class="audio-listen-btn" id="audio-btn-${post.id}" onclick="toggleAudioNarration('${post.id}')" title="Listen to paper synthesis">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+            <span>Listen</span>
           </button>
 
           <!-- Illuminate Dropdown Action Button -->
@@ -711,6 +724,11 @@ function attachCarouselEvents() {
 
       dots.forEach((dot, idx) => {
         dot.classList.toggle('active', idx === activeIdx);
+      });
+
+      const storyBars = container.querySelectorAll('.story-progress-bar');
+      storyBars.forEach((bar, idx) => {
+        bar.classList.toggle('active', idx <= activeIdx);
       });
 
       if (badge && dots.length > 0) {
@@ -1719,39 +1737,170 @@ function initEventListeners() {
 let activeSharePostId = null;
 function openShareModal(postId) {
   activeSharePostId = postId;
-  const post = state.posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
   if (!post) return;
 
   const modal = document.getElementById('shareModal');
   const input = document.getElementById('shareUrlInput');
   const url = `${window.location.origin}${window.location.pathname}#folio-${postId}`;
-  input.value = url;
+  if (input) input.value = url;
 
   // Social share buttons
-  document.getElementById('shareOnXBtn').onclick = () => {
-    const text = encodeURIComponent(`Check out this breakthrough research Folio on Folerio: "${post.title}"\n${url}`);
-    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-  };
-
-  document.getElementById('shareOnLinkedInBtn').onclick = () => {
-    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
-  };
-
-  document.getElementById('downloadCurrentCardBtn').onclick = () => {
-    const data = {
-      title: post.title,
-      authors: post.authors,
-      field: post.field,
-      hook: post.slides[0]?.hook,
-      method: post.slides[1]?.content,
-      results: post.slides[2]?.content,
-      critique: post.slides[3]?.content,
-      doi: post.doi
+  const xBtn = document.getElementById('shareOnXBtn');
+  if (xBtn) {
+    xBtn.onclick = () => {
+      const text = encodeURIComponent(`Check out this breakthrough research Folio on Folerio: "${post.title}"\n${url}`);
+      window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
     };
-    CardGenerator.exportToCanvas(data, 0, post.theme || 'obsidian');
+  }
+
+  const inBtn = document.getElementById('shareOnLinkedInBtn');
+  if (inBtn) {
+    inBtn.onclick = () => {
+      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+    };
+  }
+
+  const dlBtn = document.getElementById('downloadCurrentCardBtn');
+  if (dlBtn) {
+    dlBtn.onclick = () => {
+      const data = {
+        title: post.title,
+        authors: post.authors,
+        field: post.field,
+        hook: post.slides[0]?.hook,
+        method: post.slides[1]?.content,
+        results: post.slides[2]?.content,
+        critique: post.slides[3]?.content,
+        doi: post.doi
+      };
+      CardGenerator.exportToCanvas(data, 0, post.theme || 'obsidian');
+    };
+  }
+
+  // 1-Click Academic Citation Formatter (APA, BibTeX, Nature, MLA)
+  let activeCitationFmt = 'apa';
+  const previewBox = document.getElementById('citationPreviewBox');
+  const updateCitation = () => {
+    if (previewBox) previewBox.textContent = generateCitation(post, activeCitationFmt);
+  };
+  updateCitation();
+
+  document.querySelectorAll('.citation-tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.citation-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeCitationFmt = tab.getAttribute('data-fmt') || 'apa';
+      updateCitation();
+      try {
+        if (navigator.vibrate) navigator.vibrate(10);
+      } catch (e) {}
+    };
+  });
+
+  const copyCitBtn = document.getElementById('copyCitationBtn');
+  if (copyCitBtn) {
+    copyCitBtn.onclick = () => {
+      const cit = generateCitation(post, activeCitationFmt);
+      navigator.clipboard.writeText(cit);
+      showToast(`📋 ${activeCitationFmt.toUpperCase()} citation copied to clipboard!`);
+      try {
+        if (navigator.vibrate) navigator.vibrate(20);
+      } catch (e) {}
+    };
+  }
+
+  if (modal) modal.style.display = 'flex';
+}
+
+function generateCitation(post, format = 'apa') {
+  if (!post) return '';
+  const year = '2026';
+  const title = post.title || 'Untitled Research Folio';
+  const authors = post.authors || 'Unknown Scholar';
+  const doi = post.doi ? ` https://doi.org/${post.doi}` : '';
+  const url = `${window.location.origin}${window.location.pathname}#folio-${post.id}`;
+
+  switch (format) {
+    case 'bibtex':
+      const citeKey = (authors.split(',')[0].replace(/[^a-zA-Z]/g, '') || 'scholar').toLowerCase() + year;
+      return `@article{${citeKey},
+  title = {${title}},
+  author = {${authors}},
+  journal = {Folerio Monograph Series},
+  year = {${year}},
+  url = {${url}}
+}`;
+    case 'nature':
+      return `${authors}. ${title}. Folerio Dispatches (2026).${doi}`;
+    case 'mla':
+      return `${authors}. "${title}." Folerio, 2026, ${url}.`;
+    case 'apa':
+    default:
+      return `${authors} (${year}). ${title}. Folerio Peer Dispatches.${doi || ' ' + url}`;
+  }
+}
+
+/* ==========================================================================
+   Audio Narration (Text-to-Speech) for Research Folios
+   ========================================================================== */
+let currentUtterance = null;
+let currentAudioPostId = null;
+
+function toggleAudioNarration(postId) {
+  const btn = document.getElementById(`audio-btn-${postId}`);
+
+  if (window.speechSynthesis && window.speechSynthesis.speaking && currentAudioPostId === postId) {
+    window.speechSynthesis.cancel();
+    btn?.classList.remove('speaking-wave');
+    currentAudioPostId = null;
+    showToast('Audio narration paused');
+    return;
+  }
+
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  document.querySelectorAll('.audio-listen-btn').forEach(b => b.classList.remove('speaking-wave'));
+
+  const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
+  if (!post) return;
+
+  const hook = post.slides[0]?.hook || '';
+  const details = post.slides[1]?.content || '';
+  const results = post.slides[2]?.content || '';
+  const narrativeText = `${post.title}. Summary: ${hook}. Details: ${details}. Key Results: ${results}`;
+
+  if (!('speechSynthesis' in window)) {
+    showToast('Speech synthesis not supported on this device');
+    return;
+  }
+
+  const utter = new SpeechSynthesisUtterance(narrativeText);
+  utter.rate = 1.0;
+  utter.pitch = 1.0;
+
+  utter.onstart = () => {
+    currentAudioPostId = postId;
+    btn?.classList.add('speaking-wave');
+    showToast('🎧 Playing Folio audio synthesis');
+    try {
+      if (navigator.vibrate) navigator.vibrate(15);
+    } catch (e) {}
   };
 
-  modal.style.display = 'flex';
+  utter.onend = () => {
+    btn?.classList.remove('speaking-wave');
+    currentAudioPostId = null;
+  };
+
+  utter.onerror = () => {
+    btn?.classList.remove('speaking-wave');
+    currentAudioPostId = null;
+  };
+
+  currentUtterance = utter;
+  window.speechSynthesis.speak(utter);
 }
 
 // Helpers
@@ -1870,25 +2019,62 @@ function renderProfileView() {
   if (!container) return;
 
   if (!state.currentUser) {
-    // Guest Mode / Ghost Scholar
+    // Guest Mode / Ghost Scholar Profile (Large Circle Avatar, Ghost Name, Auth Options)
     container.innerHTML = `
       <div class="profile-view-wrap">
         <div class="ghost-profile-card">
-          <div class="ghost-avatar-big">👻</div>
-          <h2 class="ghost-title">Ghost Scholar</h2>
-          <div class="ghost-caption">Guest Reader · Unauthenticated</div>
-          <p class="ghost-desc">You are currently reading anonymously. Join the Folerio academic network to track disciplines, connect with colleagues, sync your saved library, and publish peer-grade Folios.</p>
-          <div class="ghost-action-row">
-            <button class="btn btn-primary" onclick="openAuthModal('signin')">Sign In</button>
-            <button class="btn btn-outline" onclick="openAuthModal('signup')">Create Scholar Account</button>
+          <!-- Large Profile Circle Avatar -->
+          <div class="ghost-avatar-circle">
+            <span class="ghost-emoji-face">👻</span>
           </div>
-        </div>
 
-        <div class="scholar-stats-row">
-          <div class="stat-col"><span class="stat-item-num">0</span><span class="stat-item-label">Published</span></div>
-          <div class="stat-col"><span class="stat-item-num">${state.colleagues.size}</span><span class="stat-item-label">Colleagues</span></div>
-          <div class="stat-col"><span class="stat-item-num">${state.trackedTopics.size}</span><span class="stat-item-label">Tracked Fields</span></div>
-          <div class="stat-col"><span class="stat-item-num">${state.savedPostIds.size}</span><span class="stat-item-label">Saved</span></div>
+          <!-- Name Place: Ghost -->
+          <h1 class="ghost-profile-name">Ghost</h1>
+          <div class="ghost-profile-handle">@ghost.scholar · Stealth Guest Mode</div>
+
+          <p class="ghost-profile-bio">You are currently reading in anonymous stealth mode. Sign in or create an account to publish Folios, connect with colleagues, and sync your research library across devices.</p>
+
+          <div class="ghost-auth-actions">
+            <button class="btn btn-primary btn-auth-lg" onclick="openAuthModal('signin')">Sign In</button>
+            <button class="btn btn-outline btn-auth-lg" onclick="openAuthModal('signup')">Create Account</button>
+          </div>
+
+          <button class="btn-demo-scholar" onclick="loginAsDemoScholar()">
+            <span class="demo-sparkle">✦</span> 1-Click Demo Scholar: Dr. Ihtisham Naeem
+          </button>
+
+          <!-- Scholar Network Benefits -->
+          <div class="ghost-benefits-box">
+            <div class="benefit-item">
+              <span class="benefit-icon">🏛️</span>
+              <div class="benefit-text">
+                <strong>Academic Profile Credentials</strong>
+                <span>Showcase your University, Lab, ORCID iD, and Google Scholar citations.</span>
+              </div>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-icon">🤝</span>
+              <div class="benefit-text">
+                <strong>Colleague Discourse</strong>
+                <span>Connect with breakthrough researchers and debate peer critiques.</span>
+              </div>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-icon">⚡</span>
+              <div class="benefit-text">
+                <strong>Cloud & Offline Sync</strong>
+                <span>Auto-cache 500 to 5,000 folios on your device for reading anywhere.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Social / Activity Stats Row -->
+          <div class="scholar-stats-row">
+            <div class="stat-col"><span class="stat-item-num">0</span><span class="stat-item-label">Published</span></div>
+            <div class="stat-col"><span class="stat-item-num">${state.colleagues.size}</span><span class="stat-item-label">Colleagues</span></div>
+            <div class="stat-col"><span class="stat-item-num">${state.trackedTopics.size}</span><span class="stat-item-label">Tracked Fields</span></div>
+            <div class="stat-col"><span class="stat-item-num">${state.savedPostIds.size}</span><span class="stat-item-label">Saved</span></div>
+          </div>
         </div>
       </div>
     `;
@@ -1990,7 +2176,7 @@ function setProfileTab(tabName) {
 }
 
 function updateAuthUI() {
-  const emoji = document.getElementById('mobileAccountEmoji');
+  const avatarWrap = document.getElementById('mobileAccountAvatarWrap');
   const label = document.getElementById('mobileAccountLabel');
   const sidebarAvatarText = document.getElementById('sidebarAvatarText');
   const sidebarProfileName = document.getElementById('sidebarProfileName');
@@ -1998,16 +2184,25 @@ function updateAuthUI() {
 
   if (state.currentUser) {
     const initials = state.currentUser.avatarInitials || getInitials(state.currentUser.name);
-    if (emoji) emoji.textContent = initials;
+    if (avatarWrap) {
+      avatarWrap.innerHTML = `<span style="font-weight:700; font-size:0.75rem; color:var(--accent-cyan);">${initials}</span>`;
+    }
     if (label) label.textContent = state.currentUser.name.split(' ')[0] || 'Profile';
     if (sidebarAvatarText) sidebarAvatarText.textContent = initials;
     if (sidebarProfileName) sidebarProfileName.textContent = state.currentUser.name;
     if (sidebarProfileCaption) sidebarProfileCaption.textContent = 'Active Scholar';
   } else {
-    if (emoji) emoji.textContent = '👻';
+    if (avatarWrap) {
+      avatarWrap.innerHTML = `
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      `;
+    }
     if (label) label.textContent = 'Account';
     if (sidebarAvatarText) sidebarAvatarText.textContent = '👻';
-    if (sidebarProfileName) sidebarProfileName.textContent = 'Ghost Scholar';
+    if (sidebarProfileName) sidebarProfileName.textContent = 'Ghost';
     if (sidebarProfileCaption) sidebarProfileCaption.textContent = 'Guest · Tap to Join';
   }
 }
