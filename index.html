@@ -830,6 +830,62 @@
     </div>
   </div>
 
+  <!-- Clean Folio Screenshot Preview & Save Modal -->
+  <div class="bottom-sheet-backdrop" id="screenshotModalBackdrop" onclick="closeScreenshotModal()"></div>
+  <div class="screenshot-modal" id="screenshotModal" role="dialog" aria-label="Screenshot Captured">
+    <div class="screenshot-modal-header">
+      <div class="screenshot-modal-title-wrap">
+        <div class="screenshot-badge-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+          <span>Folio Captured</span>
+        </div>
+        <h3 class="screenshot-modal-heading">Slide Screenshot</h3>
+      </div>
+      <button class="screenshot-close-btn" onclick="closeScreenshotModal()" aria-label="Close Preview">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="screenshot-modal-body">
+      <div class="screenshot-preview-container">
+        <img id="screenshotPreviewImg" src="" alt="Captured Folio Slide" />
+      </div>
+      <p class="screenshot-save-status" id="screenshotSaveStatus">
+        📸 Saved directly to your Gallery / Photos album in <code>Pictures/Folerio</code>
+      </p>
+    </div>
+
+    <div class="screenshot-modal-footer">
+      <button class="screenshot-action-btn primary" id="btnDownloadScreenshot" onclick="triggerManualDownloadScreenshot()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Save to Photos</span>
+      </button>
+      <button class="screenshot-action-btn" id="btnShareScreenshot" onclick="triggerShareScreenshot()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+        <span>Share</span>
+      </button>
+      <button class="screenshot-action-btn secondary" onclick="closeScreenshotModal()">
+        <span>Done</span>
+      </button>
+    </div>
+  </div>
+
   <script src="html2canvas.min.js"></script>
   <script src="cache-manager.js"></script>
   <script src="supabase-client.js"></script>

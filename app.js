@@ -358,6 +358,44 @@ async function loadPosts() {
   renderExploreFeed();
   renderExploreDisciplinesGrid();
   updateOfflineStatusBanner();
+
+  // Native Android permissions & background live update check
+  if (typeof window !== 'undefined' && window.FolerioNative && typeof window.FolerioNative.requestPermissions === 'function') {
+    try { window.FolerioNative.requestPermissions(); } catch (e) {}
+  }
+  checkForLiveUpdates();
+}
+
+/**
+ * Over-the-air background updates:
+ * Silently checks if newly published folios exist on GitHub Pages without disrupting offline feed.
+ */
+async function checkForLiveUpdates() {
+  if (!navigator.onLine) return;
+  try {
+    const remoteRes = await fetch('https://ihtishamnaeem36.github.io/researcher-social/papers-data.json?t=' + Date.now(), {
+      cache: 'no-store'
+    });
+    if (remoteRes.ok) {
+      const remoteData = await remoteRes.json();
+      if (Array.isArray(remoteData) && remoteData.length > 0) {
+        const existingIds = new Set(state.posts.map(p => p.id));
+        const newFolios = remoteData.filter(p => !existingIds.has(p.id));
+        if (newFolios.length > 0) {
+          console.log(`[Folerio OTA] Auto-merged ${newFolios.length} new research folios in background.`);
+          state.posts = [...state.posts, ...newFolios];
+          if (typeof FolioCacheDB !== 'undefined') {
+            FolioCacheDB.cacheFolios(state.posts, 'frontier').catch(console.warn);
+          }
+          renderFeed();
+          renderExploreFeed();
+        }
+      }
+    }
+  } catch (err) {
+    // Graceful offline fallback
+    console.log('[Folerio OTA] Offline or network check skipped');
+  }
 }
 
 function updateSavedBadge() {
@@ -2649,15 +2687,18 @@ async function captureSingleSlideClean(postId) {
 
   try {
     if (typeof html2canvas === 'function') {
+      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
       const canvas = await html2canvas(activeSlide, {
-        scale: 2,
+        scale: Math.max(window.devicePixelRatio || 1, 2),
         useCORS: true,
-        backgroundColor: null,
+        allowTaint: true,
+        backgroundColor: isDark ? '#0b0f19' : '#ffffff',
         logging: false
       });
       const imgData = canvas.toDataURL('image/png');
-      downloadImage(imgData, `folerio-${postId}-slide-${activeIdx + 1}.png`);
-      showToast(`📸 Slide ${activeIdx + 1} captured cleanly (no overlays)!`);
+      const filename = `folerio-${postId}-slide-${activeIdx + 1}.png`;
+      saveScreenshot(imgData, filename, { postId, slideIdx: activeIdx + 1, totalSlides: slides.length });
+      showToast(`📸 Slide ${activeIdx + 1} captured cleanly!`);
     } else {
       showToast(`📸 Clean slide captured`);
     }
@@ -2689,19 +2730,22 @@ async function captureFullFolioClean(postId) {
   card.classList.add('clean-screenshot-mode');
 
   try {
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
     for (let i = 0; i < totalSlides; i++) {
       track.scrollTo({ left: i * slideWidth, behavior: 'auto' });
       await new Promise(r => setTimeout(r, 150));
 
       if (typeof html2canvas === 'function') {
         const canvas = await html2canvas(slides[i], {
-          scale: 2,
+          scale: Math.max(window.devicePixelRatio || 1, 2),
           useCORS: true,
-          backgroundColor: null,
+          allowTaint: true,
+          backgroundColor: isDark ? '#0b0f19' : '#ffffff',
           logging: false
         });
         const imgData = canvas.toDataURL('image/png');
-        downloadImage(imgData, `folerio-${postId}-slide-${i + 1}-of-${totalSlides}.png`);
+        const filename = `folerio-${postId}-slide-${i + 1}-of-${totalSlides}.png`;
+        saveScreenshot(imgData, filename, { postId, slideIdx: i + 1, totalSlides, silentModal: i < totalSlides - 1 });
       }
     }
     showToast(`📸 Complete Folio (${totalSlides} slides) captured cleanly!`);
@@ -2727,13 +2771,104 @@ function triggerCameraFlash() {
   } catch (e) {}
 }
 
-function downloadImage(dataUrl, filename) {
+let currentScreenshotState = { dataUrl: null, filename: null };
+
+/**
+ * Universal screenshot saving:
+ * 1. Native Android MediaStore (saved directly to Pictures/Folerio via Java bridge)
+ * 2. Browser standard <a> download trigger
+ * 3. Shows the in-app Screenshot Preview Modal for immediate visual confirmation & sharing
+ */
+function saveScreenshot(dataUrl, filename, meta = {}) {
+  currentScreenshotState = { dataUrl, filename, meta };
+  let savedNatively = false;
+
+  // 1. Android Native Java bridge (Direct MediaStore save to Pictures/Folerio)
+  if (typeof window !== 'undefined' && window.FolerioNative && typeof window.FolerioNative.saveImageToGallery === 'function') {
+    try {
+      window.FolerioNative.saveImageToGallery(dataUrl, filename);
+      savedNatively = true;
+    } catch (e) {
+      console.warn('FolerioNative save error:', e);
+    }
+  }
+
+  // 2. Standard Browser <a> download link
+  try {
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (e) {}
+
+  // 3. Open Screenshot Preview Modal for confirmation
+  if (!meta.silentModal) {
+    openScreenshotModal(dataUrl, filename, savedNatively, meta);
+  }
+}
+
+function openScreenshotModal(dataUrl, filename, savedNatively, meta = {}) {
+  const modal = document.getElementById('screenshotModal');
+  const backdrop = document.getElementById('screenshotModalBackdrop');
+  const img = document.getElementById('screenshotPreviewImg');
+  const status = document.getElementById('screenshotSaveStatus');
+  
+  if (!modal || !backdrop || !img) return;
+
+  img.src = dataUrl;
+  if (status) {
+    if (savedNatively) {
+      status.innerHTML = '📸 <strong>Saved directly to your Gallery / Photos album</strong> in <code>Pictures/Folerio</code>.';
+    } else {
+      status.innerHTML = '📸 Slide captured cleanly! Click <strong>Save to Photos</strong> or tap & hold the image to save.';
+    }
+  }
+
+  backdrop.classList.add('open');
+  modal.classList.add('open');
+}
+
+function closeScreenshotModal() {
+  const modal = document.getElementById('screenshotModal');
+  const backdrop = document.getElementById('screenshotModalBackdrop');
+  if (modal) modal.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+function triggerManualDownloadScreenshot() {
+  if (!currentScreenshotState.dataUrl) return;
+  if (typeof window !== 'undefined' && window.FolerioNative && typeof window.FolerioNative.saveImageToGallery === 'function') {
+    window.FolerioNative.saveImageToGallery(currentScreenshotState.dataUrl, currentScreenshotState.filename || 'folerio-slide.png');
+  }
   const link = document.createElement('a');
-  link.download = filename;
-  link.href = dataUrl;
+  link.download = currentScreenshotState.filename || 'folerio-slide.png';
+  link.href = currentScreenshotState.dataUrl;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  showToast('💾 Saving screenshot to Photos...');
+}
+
+async function triggerShareScreenshot() {
+  if (!currentScreenshotState.dataUrl) return;
+  try {
+    const res = await fetch(currentScreenshotState.dataUrl);
+    const blob = await res.blob();
+    const file = new File([blob], currentScreenshotState.filename || 'folerio-slide.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: 'Folerio Research Slide',
+        text: 'Scholarly Folio slide from Folerio',
+        files: [file]
+      });
+      return;
+    }
+  } catch (e) {
+    console.warn('Share error:', e);
+  }
+  showToast('Sharing not supported on this browser; image is saved.');
 }
 
 /* ==========================================================================
