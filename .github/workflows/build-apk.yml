@@ -50,11 +50,9 @@ jobs:
         run: |
           cd android
           if ! ./gradlew assembleDebug --stacktrace > ../gradle-build.log 2>&1; then
-            echo "### Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 120 ../gradle-build.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 120 ../gradle-build.log
+            ERR=$(tail -n 25 ../gradle-build.log | tr '\n' ' ' | sed 's/"//g')
+            echo "::error title=GradleBuildFailure::$ERR"
+            tail -n 60 ../gradle-build.log
             exit 1
           fi
 
