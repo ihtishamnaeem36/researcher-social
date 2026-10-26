@@ -252,6 +252,15 @@
 
       <!-- Fluid Main Scroll Area with Dedicated Views -->
       <main class="app-fluid-content">
+        <!-- Instagram-Style Pull-To-Refresh Indicator -->
+        <div class="pull-refresh-indicator" id="pullRefreshIndicator">
+          <div class="refresh-spinner" id="refreshSpinner">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+          </div>
+        </div>
+
         <!-- View 1: Dispatch Feed (Tracked Fields & Colleagues Stream) -->
         <div id="feedViewContainer" class="app-view-container active">
           <!-- Feed Mode Switcher (Frontier Research vs Foundations / Basics) -->
@@ -309,6 +318,17 @@
 
         <!-- View 2: Explore Horizons & Discovery Hub -->
         <div id="exploreViewContainer" class="app-view-container" style="display: none;">
+          <!-- Dedicated Explore Search Bar (Scrolls with page and disappears on scroll down) -->
+          <div class="explore-search-container" id="exploreSearchContainer">
+            <div class="explore-search-bar">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="exploreSearchInput" placeholder="Search disciplines, DOIs, authors, or concepts...">
+            </div>
+          </div>
+
           <div class="explore-hero-card">
             <div class="explore-hero-badge">HORIZONS RADAR</div>
             <h2 class="explore-hero-title">Explore Global Peer Literature</h2>
@@ -750,6 +770,47 @@
   <!-- Hidden canvas for exporting images -->
   <canvas id="exportCanvas" style="display: none;"></canvas>
 
+  <!-- Silent Screenshot Camera Flash Overlay -->
+  <div class="camera-flash-overlay" id="cameraFlashOverlay"></div>
+
+  <!-- Instagram/TikTok Style Comments Bottom Sheet Modal -->
+  <div class="bottom-sheet-backdrop" id="commentsSheetBackdrop" onclick="closeCommentsBottomSheet()"></div>
+  <div class="comments-bottom-sheet" id="commentsBottomSheet" aria-label="Peer Critique & Discussion">
+    <div class="sheet-drag-handle" onclick="closeCommentsBottomSheet()">
+      <span class="drag-bar"></span>
+    </div>
+    <div class="sheet-header">
+      <div class="sheet-title-group">
+        <h3 class="sheet-title">Peer Critique & Discussion</h3>
+        <span class="sheet-count-badge" id="sheetCommentCount">0 comments</span>
+      </div>
+      <button class="sheet-close-btn" onclick="closeCommentsBottomSheet()" aria-label="Close Comments">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="sheet-body" id="sheetCommentsList">
+      <!-- Dynamically populated by openCommentsBottomSheet() in app.js -->
+    </div>
+    
+    <div class="sheet-footer">
+      <div class="sheet-input-row">
+        <div class="user-avatar-tiny" id="sheetUserAvatar">👻</div>
+        <input type="text" id="sheetCommentInput" placeholder="Add a scholarly observation or question..." onkeydown="if(event.key==='Enter') submitSheetComment()">
+        <button class="sheet-send-btn" id="sheetSendBtn" onclick="submitSheetComment()" aria-label="Submit Comment">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="html2canvas.min.js"></script>
   <script src="cache-manager.js"></script>
   <script src="supabase-client.js"></script>
   <script src="card-generator.js"></script>

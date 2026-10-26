@@ -3684,5 +3684,322 @@ input:focus, select:focus, textarea:focus {
   color: #0f172a;
 }
 
+/* ==========================================================================
+   Mobile Auto-Hide Header, Pull-to-Refresh & Silent Features
+   ========================================================================== */
+
+/* Auto-Collapsing Topbar on Scroll (Slides away on scroll down, reveals on scroll up) */
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  will-change: transform;
+}
+.app-topbar.topbar-hidden {
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+
+/* Arrow buttons removed for sleek swipe-first experience */
+.carousel-btn {
+  display: none !important;
+}
+
+/* Hide desktop search bar on mobile screens */
+@media (max-width: 768px) {
+  .app-topbar .search-bar {
+    display: none !important;
+  }
+}
+
+/* Dedicated Explore Search Bar (Scrolls with page and disappears) */
+.explore-search-container {
+  margin-bottom: 1.25rem;
+}
+.explore-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 0.7rem 1.15rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.explore-search-bar:focus-within {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+.explore-search-bar svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.explore-search-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  outline: none;
+}
+.explore-search-bar input::placeholder {
+  color: var(--text-muted);
+}
+[data-theme="light"] .explore-search-bar {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+/* Instagram-Style Pull-To-Refresh Indicator */
+.pull-refresh-indicator {
+  position: absolute;
+  top: -52px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99;
+  pointer-events: none;
+  transition: top 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  opacity: 0;
+}
+.pull-refresh-indicator.pulling,
+.pull-refresh-indicator.refreshing {
+  opacity: 1;
+}
+.refresh-spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-cyan);
+  transition: transform 0.1s ease;
+}
+.pull-refresh-indicator.refreshing .refresh-spinner svg {
+  animation: spinRefresh 0.85s linear infinite;
+}
+@keyframes spinRefresh {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Instagram/TikTok Style Comments Bottom Sheet */
+.bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bottom-sheet-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.comments-bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 80vh;
+  background: var(--bg-surface-elevated, #11151f);
+  border-top: 1px solid var(--border-subtle);
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+.comments-bottom-sheet.open {
+  transform: translateY(0);
+}
+.sheet-drag-handle {
+  padding: 0.65rem 0 0.35rem;
+  display: flex;
+  justify-content: center;
+  cursor: pointer;
+}
+.sheet-drag-handle .drag-bar {
+  width: 38px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-subtle, rgba(255, 255, 255, 0.2));
+}
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1.25rem 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sheet-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.sheet-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+.sheet-count-badge {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+.sheet-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 180px;
+  max-height: 52vh;
+}
+.sheet-footer {
+  padding: 0.75rem 1.15rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+.sheet-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.user-avatar-tiny {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+.sheet-input-row input {
+  flex: 1;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  padding: 0.65rem 1rem;
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  outline: none;
+}
+.sheet-input-row input:focus {
+  border-color: var(--accent-cyan);
+}
+.sheet-send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  color: #050b14;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.sheet-send-btn:active {
+  transform: scale(0.92);
+}
+
+/* Camera Flash Overlay for Silent Screenshots */
+.camera-flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 99999;
+  transition: opacity 0.28s ease-out;
+}
+.camera-flash-overlay.flashing {
+  opacity: 0.85;
+}
+
+/* Double-Tap Heart Burst Animation */
+.double-tap-heart {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 4.5rem;
+  pointer-events: none;
+  z-index: 100;
+  animation: heartBurst 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  filter: drop-shadow(0 4px 16px rgba(244, 63, 94, 0.5));
+}
+@keyframes heartBurst {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  40% { transform: translate(-50%, -50%) scale(1.35); opacity: 0.95; }
+  75% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+}
+
+/* Heart Hold Charging Glow */
+.action-btn.like-btn.capturing-glow svg {
+  animation: heartPulse 0.4s ease-in-out infinite alternate;
+  color: #f43f5e !important;
+  filter: drop-shadow(0 0 10px rgba(244, 63, 94, 0.8));
+}
+@keyframes heartPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.28); }
+}
+
+/* Clean Mode during screenshot capture */
+.clean-screenshot-mode .post-header,
+.clean-screenshot-mode .carousel-counter-badge,
+.clean-screenshot-mode .carousel-dots,
+.clean-screenshot-mode .post-actions-bar,
+.clean-screenshot-mode .illuminate-drawer,
+.clean-screenshot-mode .discussion-drawer {
+  display: none !important;
+}
+
+/* Light Theme overrides for sheet & explore search */
+[data-theme="light"] .comments-bottom-sheet {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+[data-theme="light"] .sheet-header,
+[data-theme="light"] .sheet-footer {
+  border-color: #e2e8f0;
+}
+[data-theme="light"] .sheet-input-row input {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+
 
 

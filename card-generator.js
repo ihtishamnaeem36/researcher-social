@@ -72,7 +72,6 @@ const CardGenerator = {
 
         <div class="slide-footer-row">
           <span class="paper-authors-tag">${data.authors || 'Authors'}</span>
-          <span class="swipe-hint">Swipe for deep dive &rarr;</span>
         </div>
       `;
     } else if (slideIndex === 1) {
@@ -90,7 +89,6 @@ const CardGenerator = {
         </div>
         <div class="slide-footer-row">
           <span>${data.title ? data.title.slice(0, 38) + '...' : ''}</span>
-          <span class="swipe-hint">Swipe &rarr;</span>
         </div>
       `;
     } else if (slideIndex === 2) {
@@ -108,7 +106,6 @@ const CardGenerator = {
         </div>
         <div class="slide-footer-row">
           <span>Data & Evidence</span>
-          <span class="swipe-hint">Swipe &rarr;</span>
         </div>
       `;
     } else {
@@ -126,7 +123,6 @@ const CardGenerator = {
         </div>
         <div class="slide-footer-row">
           <span>Source: ${data.doi ? 'Verified DOI / Link' : 'Open Access'}</span>
-          <span style="color: ${theme.accent}">End of Carousel</span>
         </div>
       `;
     }
@@ -223,7 +219,7 @@ const CardGenerator = {
 
     ctx.font = '600 24px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = theme.accent;
-    ctx.fillText('FOLERIO • SWIPE TO READ', width - 420, height - 110);
+    ctx.fillText('FOLERIO • SCHOLARLY DISCOURSE', width - 480, height - 110);
 
     // Trigger download
     const link = document.createElement('a');

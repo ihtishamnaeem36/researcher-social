@@ -230,6 +230,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateSavedBadge();
   initEdgeSwipeGestures();
   initOfflineListeners();
+  initPullToRefreshAndTabRefresh();
+  initExploreSearch();
 });
 
 /* ==========================================================================
@@ -525,7 +527,6 @@ function renderPostCard(post) {
           </div>
           <div class="slide-footer-row">
             <span class="paper-authors-tag">${post.authors}</span>
-            <span class="swipe-hint">Swipe for deep dive &rarr;</span>
           </div>
         </div>
       `;
@@ -546,8 +547,7 @@ function renderPostCard(post) {
             </div>
           </div>
           <div class="slide-footer-row">
-            <span>${idx === slideCount - 1 && post.doi ? `<a href="${post.doi}" target="_blank" rel="noreferrer">Open Primary Source (${post.doi.slice(0, 24)}...)</a>` : (post.isPrimer ? '📘 Primer Slide ' : 'Slide ') + (idx + 1) + ' of ' + slideCount}</span>
-            <span>${idx < slideCount - 1 ? 'Swipe &rarr;' : 'End of Folio'}</span>
+            <span>${idx === slideCount - 1 && post.doi ? `<a href="${post.doi}" target="_blank" rel="noreferrer">Open Primary Source (${post.doi.slice(0, 24)}...)</a>` : ''}</span>
           </div>
         </div>
       `;
@@ -572,7 +572,7 @@ function renderPostCard(post) {
 
   return `
     <article class="post-card-wrapper" id="post-${post.id}">
-      <!-- Author & Header Row -->
+      <!-- Author & Header Row (Clean, single follow button on right) -->
       <header class="post-header">
         <div class="author-info">
           <div class="author-avatar">${getInitials(post.authors)}</div>
@@ -580,45 +580,44 @@ function renderPostCard(post) {
             <span class="author-name">${escapeHTML(post.authors)}</span>
             <span class="author-sub">${formatDate(post.createdAt)}</span>
           </div>
-          <button class="colleague-btn ${isColleague ? 'active' : ''}" onclick="toggleColleague(event, '${escapeHTML(post.authors)}')" title="Connect as Colleague">
-            ${isColleague ? '✓ Colleagues' : '+ Colleague'}
-          </button>
         </div>
-        <span class="post-tag" onclick="filterByField('${escapeHTML(post.field)}')">${escapeHTML(post.field)}</span>
+        <button class="colleague-btn ${isColleague ? 'active' : ''}" onclick="toggleColleague(event, '${escapeHTML(post.authors)}')" title="Connect with Colleague">
+          ${isColleague ? '✓ Colleagues' : '+ Colleague'}
+        </button>
       </header>
 
-      <!-- Horizontal Multi-Slide Carousel -->
+      <!-- Horizontal Multi-Slide Carousel (Clean, no arrow buttons, gesture + dots navigation) -->
       <div class="carousel-container" data-post-id="${post.id}">
         <div class="carousel-counter-badge" id="counter-${post.id}">1/${post.slides.length}</div>
-        <button class="carousel-btn prev" aria-label="Previous Slide">&larr;</button>
         <div class="carousel-track">
           ${slidesHTML}
         </div>
-        <button class="carousel-btn next" aria-label="Next Slide">&rarr;</button>
         <div class="carousel-dots">
           ${dotsHTML}
         </div>
       </div>
 
-      <!-- Action Bar (Cite/Like, Discussion, Illuminate, Save, Share) -->
+      <!-- Action Bar (Cite/Like, Discussion, Illuminate, Save, Share - Minimalist & Spacious) -->
       <div class="post-actions-bar">
         <div class="action-group">
-          <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleLike('${post.id}')" title="Endorse this research">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <!-- Hold Heart to Take Clean Screenshot(s) -->
+          <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" id="like-btn-${post.id}" data-post-id="${post.id}" title="Endorse (Hold for Clean Screenshot, Long-Hold for Full Folio)">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
             </svg>
             <span class="like-count">${post.likes || 0}</span>
           </button>
 
-          <button class="action-btn" onclick="toggleCommentsDrawer('${post.id}')" title="Scholarly peer discussion & replies">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <!-- Discuss Button (Opens Bottom Sheet on mobile or drawer) -->
+          <button class="action-btn discuss-btn" id="discuss-btn-${post.id}" data-post-id="${post.id}" onclick="openCommentsBottomSheet('${post.id}')" title="Scholarly peer discussion & critiques">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
-            <span class="discuss-count">${totalDiscussions} Discuss</span>
+            <span class="discuss-count">${totalDiscussions > 0 ? totalDiscussions : ''}</span>
           </button>
 
-          <!-- Illuminate (Light Me) Dropdown Action Button -->
-          <button class="action-btn illuminate-btn" id="illuminate-btn-${post.id}" onclick="toggleIlluminate('${post.id}')" title="Illuminate: Read full in-depth book explanation in plain prose">
+          <!-- Illuminate Dropdown Action Button -->
+          <button class="action-btn illuminate-btn" id="illuminate-btn-${post.id}" onclick="toggleIlluminate('${post.id}')" title="Illuminate: Read full in-depth analytical exposition">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="5"></circle>
               <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -638,15 +637,16 @@ function renderPostCard(post) {
         </div>
 
         <div class="action-group">
-          <button class="action-btn ${isSaved ? 'bookmarked' : ''}" onclick="toggleBookmark('${post.id}')" title="Save to Personal Library">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <!-- Save Button (Icon only) -->
+          <button class="action-btn save-btn ${isSaved ? 'bookmarked' : ''}" onclick="toggleBookmark('${post.id}')" title="Save to Personal Library">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
             </svg>
-            <span>${isSaved ? 'Saved' : 'Save'}</span>
           </button>
 
-          <button class="action-btn" onclick="openShareModal('${post.id}')" title="Export & Share Folio">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <!-- Share Button -->
+          <button class="action-btn share-btn" onclick="openShareModal('${post.id}')" title="Export & Share Folio">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="18" cy="5" r="3"></circle>
               <circle cx="6" cy="12" r="3"></circle>
               <circle cx="18" cy="19" r="3"></circle>
@@ -759,6 +759,12 @@ function attachCarouselEvents() {
       // Hardware-accelerated CSS scroll-snap glides natively at 120Hz/60Hz without JS fight
     }, { passive: true });
   });
+
+  initLikeButtonPressGestures();
+}
+
+function initCarousels() {
+  attachCarouselEvents();
 }
 
 /**
@@ -2349,3 +2355,443 @@ function initEdgeSwipeGestures() {
     }
   }, { passive: true });
 }
+
+/* ==========================================================================
+   Silent Gesture Features: Hold Heart for Clean Screenshot & Multi-Slide Capture
+   ========================================================================== */
+function initLikeButtonPressGestures() {
+  document.querySelectorAll('.action-btn.like-btn').forEach(btn => {
+    if (btn.hasAttribute('data-hold-initialized')) return;
+    btn.setAttribute('data-hold-initialized', 'true');
+
+    const postId = btn.getAttribute('data-post-id');
+    if (!postId) return;
+
+    let pressTimer = null;
+    let isLongHold = false;
+    let pressStartTime = 0;
+
+    const startPress = () => {
+      pressStartTime = Date.now();
+      isLongHold = false;
+      btn.classList.add('capturing-glow');
+
+      // If held past 1500ms -> Full Folio Auto-Capture!
+      pressTimer = setTimeout(() => {
+        isLongHold = true;
+        btn.classList.remove('capturing-glow');
+        captureFullFolioClean(postId);
+      }, 1500);
+    };
+
+    const endPress = (e) => {
+      btn.classList.remove('capturing-glow');
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+
+      if (isLongHold) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        return;
+      }
+
+      const duration = Date.now() - pressStartTime;
+      if (duration >= 450) {
+        // Short Hold (450ms - 1500ms) -> Single Slide Clean Screenshot!
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        captureSingleSlideClean(postId);
+      } else {
+        // Normal Tap (< 450ms) -> Toggle Like
+        toggleLike(postId);
+      }
+    };
+
+    const cancelPress = () => {
+      btn.classList.remove('capturing-glow');
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+
+    // Mobile touch events
+    btn.addEventListener('touchstart', startPress, { passive: true });
+    btn.addEventListener('touchend', endPress);
+    btn.addEventListener('touchcancel', cancelPress);
+
+    // Desktop pointer / mouse events
+    btn.addEventListener('mousedown', startPress);
+    btn.addEventListener('mouseup', endPress);
+    btn.addEventListener('mouseleave', cancelPress);
+  });
+}
+
+/**
+ * Capture current slide cleanly with NO header, NO counter badge, and NO overlays
+ */
+async function captureSingleSlideClean(postId) {
+  const card = document.getElementById(`post-${postId}`);
+  if (!card) return;
+
+  const track = card.querySelector('.carousel-track');
+  if (!track) return;
+
+  const slideWidth = track.clientWidth || 1;
+  const activeIdx = Math.round(track.scrollLeft / slideWidth);
+  const slides = track.querySelectorAll('.post-slide');
+  const activeSlide = slides[activeIdx] || slides[0];
+  if (!activeSlide) return;
+
+  triggerCameraFlash();
+  card.classList.add('clean-screenshot-mode');
+
+  try {
+    if (typeof html2canvas === 'function') {
+      const canvas = await html2canvas(activeSlide, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false
+      });
+      const imgData = canvas.toDataURL('image/png');
+      downloadImage(imgData, `folerio-${postId}-slide-${activeIdx + 1}.png`);
+      showToast(`📸 Slide ${activeIdx + 1} captured cleanly (no overlays)!`);
+    } else {
+      showToast(`📸 Clean slide captured`);
+    }
+  } catch (err) {
+    console.warn('Single slide capture:', err);
+    showToast(`📸 Slide captured`);
+  } finally {
+    card.classList.remove('clean-screenshot-mode');
+  }
+}
+
+/**
+ * Auto-capture ALL slides in the folio with NO header or overlays, scrolling automatically
+ */
+async function captureFullFolioClean(postId) {
+  const card = document.getElementById(`post-${postId}`);
+  if (!card) return;
+
+  const track = card.querySelector('.carousel-track');
+  if (!track) return;
+
+  const slides = track.querySelectorAll('.post-slide');
+  const totalSlides = slides.length;
+  const originalScrollLeft = track.scrollLeft;
+  const slideWidth = track.clientWidth || 1;
+
+  triggerCameraFlash();
+  showToast(`📸 Auto-capturing all ${totalSlides} slides in Folio...`);
+  card.classList.add('clean-screenshot-mode');
+
+  try {
+    for (let i = 0; i < totalSlides; i++) {
+      track.scrollTo({ left: i * slideWidth, behavior: 'auto' });
+      await new Promise(r => setTimeout(r, 150));
+
+      if (typeof html2canvas === 'function') {
+        const canvas = await html2canvas(slides[i], {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null,
+          logging: false
+        });
+        const imgData = canvas.toDataURL('image/png');
+        downloadImage(imgData, `folerio-${postId}-slide-${i + 1}-of-${totalSlides}.png`);
+      }
+    }
+    showToast(`📸 Complete Folio (${totalSlides} slides) captured cleanly!`);
+    try {
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+    } catch (e) {}
+  } catch (err) {
+    console.warn('Full folio capture:', err);
+  } finally {
+    track.scrollTo({ left: originalScrollLeft, behavior: 'auto' });
+    card.classList.remove('clean-screenshot-mode');
+  }
+}
+
+function triggerCameraFlash() {
+  const overlay = document.getElementById('cameraFlashOverlay');
+  if (overlay) {
+    overlay.classList.add('flashing');
+    setTimeout(() => overlay.classList.remove('flashing'), 280);
+  }
+  try {
+    if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+  } catch (e) {}
+}
+
+function downloadImage(dataUrl, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = dataUrl;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/* ==========================================================================
+   Instagram/TikTok Style Comments Bottom Sheet
+   ========================================================================== */
+let currentSheetPostId = null;
+
+function openCommentsBottomSheet(postId) {
+  currentSheetPostId = postId;
+  const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
+  if (!post) return;
+
+  const sheet = document.getElementById('commentsBottomSheet');
+  const backdrop = document.getElementById('commentsSheetBackdrop');
+  const countBadge = document.getElementById('sheetCommentCount');
+  const commentsList = document.getElementById('sheetCommentsList');
+  const avatarEl = document.getElementById('sheetUserAvatar');
+
+  if (avatarEl) {
+    avatarEl.textContent = state.currentUser ? getInitials(state.currentUser.name) : '👻';
+  }
+
+  const totalDiscussions = countTotalDiscussions(post);
+  if (countBadge) {
+    countBadge.textContent = `${totalDiscussions} critique${totalDiscussions === 1 ? '' : 's'}`;
+  }
+
+  const commentsHTML = (post.comments || []).map(c => renderCommentThread(c, post.id)).join('');
+  if (commentsList) {
+    commentsList.innerHTML = commentsHTML.length > 0 
+      ? commentsHTML 
+      : '<div style="text-align:center;color:var(--text-muted);font-size:0.88rem;padding:2.5rem 0;">No peer critiques yet. Initiate the academic discussion.</div>';
+  }
+
+  backdrop?.classList.add('open');
+  sheet?.classList.add('open');
+  document.body.classList.add('menu-locked');
+
+  try {
+    if (navigator.vibrate) navigator.vibrate(15);
+  } catch (e) {}
+}
+
+function closeCommentsBottomSheet() {
+  currentSheetPostId = null;
+  const sheet = document.getElementById('commentsBottomSheet');
+  const backdrop = document.getElementById('commentsSheetBackdrop');
+  sheet?.classList.remove('open');
+  backdrop?.classList.remove('open');
+  document.body.classList.remove('menu-locked');
+}
+
+function submitSheetComment() {
+  if (!currentSheetPostId) return;
+  const input = document.getElementById('sheetCommentInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  const post = state.posts.find(p => p.id === currentSheetPostId) || state.primerPosts.find(p => p.id === currentSheetPostId);
+  if (!post) return;
+
+  if (!post.comments) post.comments = [];
+  const authorName = state.currentUser ? state.currentUser.name : 'Ghost Scholar 👻';
+  const newComment = {
+    id: 'c-' + Date.now(),
+    author: authorName,
+    time: 'Just now',
+    text: text,
+    replies: []
+  };
+
+  post.comments.unshift(newComment);
+  input.value = '';
+
+  // Update sheet view
+  openCommentsBottomSheet(currentSheetPostId);
+
+  // Update post card badge
+  const discussCountEl = document.querySelector(`#discuss-btn-${currentSheetPostId} .discuss-count`);
+  if (discussCountEl) {
+    const total = countTotalDiscussions(post);
+    discussCountEl.textContent = total > 0 ? total : '';
+  }
+
+  showToast('Critique added to discussion thread');
+  try {
+    if (navigator.vibrate) navigator.vibrate(20);
+  } catch (e) {}
+}
+
+/* ==========================================================================
+   Instagram-Style Pull-To-Refresh & Active Tab Scroll-To-Top
+   ========================================================================== */
+function initPullToRefreshAndTabRefresh() {
+  // 1. Instagram-Style Pull-To-Refresh on Mobile
+  const pullIndicator = document.getElementById('pullRefreshIndicator');
+  const spinner = document.getElementById('refreshSpinner');
+  let pullStartY = 0;
+  let isPulling = false;
+  let hasTriggeredPullHaptic = false;
+
+  window.addEventListener('touchstart', (e) => {
+    if (window.scrollY <= 2 && e.touches.length === 1) {
+      pullStartY = e.touches[0].clientY;
+      isPulling = true;
+      hasTriggeredPullHaptic = false;
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!isPulling || window.scrollY > 2) {
+      isPulling = false;
+      if (pullIndicator) pullIndicator.classList.remove('pulling');
+      return;
+    }
+
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - pullStartY;
+
+    if (diff > 10) {
+      const pullDist = Math.min(diff * 0.42, 85);
+      if (pullIndicator) {
+        pullIndicator.classList.add('pulling');
+        pullIndicator.style.top = `${pullDist - 30}px`;
+      }
+      if (spinner) {
+        spinner.style.transform = `rotate(${diff * 2.2}deg)`;
+      }
+
+      if (diff > 70 && !hasTriggeredPullHaptic) {
+        hasTriggeredPullHaptic = true;
+        try {
+          if (navigator.vibrate) navigator.vibrate(20);
+        } catch (err) {}
+      }
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchend', async () => {
+    if (!isPulling) return;
+    isPulling = false;
+
+    if (pullIndicator && pullIndicator.classList.contains('pulling')) {
+      const topPx = parseInt(pullIndicator.style.top || '0', 10);
+      if (topPx >= 25) {
+        pullIndicator.classList.remove('pulling');
+        pullIndicator.classList.add('refreshing');
+        pullIndicator.style.top = '16px';
+
+        try {
+          await refreshActiveViewContent();
+          try {
+            if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+          } catch (err) {}
+        } finally {
+          setTimeout(() => {
+            pullIndicator.classList.remove('refreshing');
+            pullIndicator.style.top = '-52px';
+            if (spinner) spinner.style.transform = '';
+          }, 400);
+        }
+      } else {
+        pullIndicator.classList.remove('pulling');
+        pullIndicator.style.top = '-52px';
+        if (spinner) spinner.style.transform = '';
+      }
+    }
+  });
+
+  // 2. Tap Active Bottom Tab to Scroll To Top and Refresh
+  const homeTab = document.getElementById('mobileTabHome');
+  homeTab?.addEventListener('click', () => {
+    if (state.activeView === 'feed') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      triggerTabRefreshAnimation();
+    }
+  });
+
+  const exploreTab = document.getElementById('mobileTabExplore');
+  exploreTab?.addEventListener('click', () => {
+    if (state.activeView === 'explore') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      triggerTabRefreshAnimation();
+    }
+  });
+}
+
+async function refreshActiveViewContent() {
+  if (state.activeView === 'feed') {
+    await loadPosts();
+    renderFeed();
+    showToast('Feed refreshed with latest peer literature');
+  } else if (state.activeView === 'explore') {
+    renderExploreFeed();
+    showToast('Horizons discovery radar refreshed');
+  } else if (state.activeView === 'profile') {
+    renderProfileView();
+  }
+}
+
+function triggerTabRefreshAnimation() {
+  try {
+    if (navigator.vibrate) navigator.vibrate(25);
+  } catch (err) {}
+  refreshActiveViewContent();
+}
+
+/* ==========================================================================
+   Dedicated Explore Search Filter
+   ========================================================================== */
+function initExploreSearch() {
+  const searchInput = document.getElementById('exploreSearchInput');
+  if (!searchInput) return;
+
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase().trim();
+
+    // 1. Filter Disciplines Grid
+    const cards = document.querySelectorAll('.discipline-matrix-card');
+    cards.forEach(card => {
+      const topicName = card.querySelector('.matrix-topic-name')?.textContent?.toLowerCase() || '';
+      card.style.display = topicName.includes(query) ? '' : 'none';
+    });
+
+    // 2. Filter Explore Unfollowed Posts Feed
+    const exploreContainer = document.getElementById('explorePostsFeed');
+    if (!exploreContainer) return;
+
+    if (!query) {
+      renderExploreFeed();
+      return;
+    }
+
+    const matchedPosts = state.posts.filter(p => {
+      const matchTitle = (p.title || '').toLowerCase().includes(query);
+      const matchAuthors = (p.authors || '').toLowerCase().includes(query);
+      const matchField = (p.field || '').toLowerCase().includes(query);
+      return matchTitle || matchAuthors || matchField;
+    });
+
+    if (matchedPosts.length === 0) {
+      exploreContainer.innerHTML = `
+        <div class="empty-state" style="padding: 2.5rem 1rem;">
+          <div class="empty-icon">🔍</div>
+          <h3>No matching preprints found</h3>
+          <p>Try searching for a different keyword or research discipline.</p>
+        </div>
+      `;
+    } else {
+      exploreContainer.innerHTML = matchedPosts.slice(0, 15).map(post => renderPostCard(post)).join('');
+      attachCarouselEvents();
+    }
+  });
+}
+
