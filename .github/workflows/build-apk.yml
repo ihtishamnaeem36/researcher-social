@@ -49,7 +49,14 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleDebug --stacktrace
+          if ! ./gradlew assembleDebug --stacktrace > ../gradle-build.log 2>&1; then
+            echo "### Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 120 ../gradle-build.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 120 ../gradle-build.log
+            exit 1
+          fi
 
       - name: Copy & Rename APK
         run: |
