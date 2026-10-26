@@ -179,6 +179,20 @@ const FOLIO_ARCHETYPES = {
   }
 };
 
+// Default Demo Scholar Profile
+const DEMO_SCHOLAR_PROFILE = {
+  id: 'scholar-in',
+  name: 'Dr. Ihtisham Naeem',
+  title: 'Lead Research Scholar',
+  institution: 'Quaid-i-Azam University / Computational Lab',
+  department: 'Department of Physics & Complex Systems',
+  field: 'Quantum Information & Biophysics',
+  orcid: '0000-0002-1825-0097',
+  scholarUrl: 'https://scholar.google.com',
+  bio: 'Investigating quantum error-correcting codes, biomolecular diffusion dynamics, and neural computation interfaces.',
+  avatarInitials: 'IN'
+};
+
 // App State
 const state = {
   posts: [],
@@ -192,6 +206,11 @@ const state = {
   currentTheme: 'dark',
   pageLimit: 15,
   hasInitializedScroll: false,
+  currentUser: JSON.parse(localStorage.getItem('folerio_user_profile') || 'null'),
+  trackedTopics: new Set(JSON.parse(localStorage.getItem('folerio_tracked_topics') || '["AI & Machine Learning", "Quantum Computing", "Biotech & Genetics"]')),
+  colleagues: new Set(JSON.parse(localStorage.getItem('folerio_colleagues') || '["Abramson, Adler et al."]')),
+  activeView: 'feed', // 'feed' | 'explore' | 'profile'
+  profileActiveTab: 'folios', // 'folios' | 'saved' | 'colleagues' | 'topics'
   creator: {
     activeSlideIndex: 0,
     selectedTheme: 'obsidian',
@@ -204,10 +223,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   SupabaseBridge.init();
   updateSupabaseStatusIndicator();
+  updateAuthUI();
   await loadPosts();
   initEventListeners();
   initCreatorStudio();
   updateSavedBadge();
+  initEdgeSwipeGestures();
+  initOfflineListeners();
 });
 
 /* ==========================================================================
@@ -272,20 +294,47 @@ function updateSupabaseStatusIndicator() {
 }
 
 async function loadPosts() {
+  // 1. Instant offline retrieval from IndexedDB
+  try {
+    if (typeof FolioCacheDB !== 'undefined') {
+      const cached = await FolioCacheDB.getAllCachedFolios('frontier');
+      const cachedPrimers = await FolioCacheDB.getAllCachedFolios('primer');
+      if (cached && cached.length > 0) {
+        state.posts = cached;
+        if (cachedPrimers && cachedPrimers.length > 0) {
+          state.primerPosts = cachedPrimers;
+        }
+        renderFeed();
+        renderExploreFeed();
+        renderExploreDisciplinesGrid();
+        updateOfflineStatusBanner();
+      }
+    }
+  } catch (err) {
+    console.warn('FolioCacheDB read error:', err);
+  }
+
+  // 2. Fetch fresh papers-data and primers
   let datasets = [];
   try {
     const res = await fetch('papers-data.json');
     if (res.ok) {
       datasets = await res.json();
+      if (typeof FolioCacheDB !== 'undefined') {
+        FolioCacheDB.cacheFolios(datasets, 'frontier').catch(console.warn);
+      }
     }
   } catch (err) {
-    console.warn('Could not fetch papers-data.json, falling back to local/seed', err);
+    console.warn('Could not fetch papers-data.json, relying on cached data', err);
   }
 
   try {
     const pRes = await fetch('primer-data.json');
     if (pRes.ok) {
       state.primerPosts = await pRes.json();
+      if (typeof FolioCacheDB !== 'undefined') {
+        FolioCacheDB.cacheFolios(state.primerPosts, 'primer').catch(console.warn);
+      }
     }
   } catch (err) {
     console.warn('Could not fetch primer-data.json', err);
@@ -295,15 +344,18 @@ async function loadPosts() {
   if (cloudOrLocal && cloudOrLocal.length > 0) {
     const datasetIds = new Set(datasets.map(d => d.id));
     const userCreated = cloudOrLocal.filter(p => !datasetIds.has(p.id));
-    state.posts = [...userCreated, ...datasets];
+    state.posts = [...userCreated, ...(datasets.length ? datasets : state.posts)];
   } else if (datasets.length > 0) {
     state.posts = datasets;
-  } else {
+  } else if (!state.posts.length) {
     state.posts = [...SEED_PAPERS];
   }
 
   initInfiniteScroll();
   renderFeed();
+  renderExploreFeed();
+  renderExploreDisciplinesGrid();
+  updateOfflineStatusBanner();
 }
 
 function updateSavedBadge() {
@@ -516,6 +568,8 @@ function renderPostCard(post) {
     </div>
   `).join('');
 
+  const isColleague = state.colleagues.has(post.authors);
+
   return `
     <article class="post-card-wrapper" id="post-${post.id}">
       <!-- Author & Header Row -->
@@ -526,8 +580,11 @@ function renderPostCard(post) {
             <span class="author-name">${escapeHTML(post.authors)}</span>
             <span class="author-sub">${formatDate(post.createdAt)}</span>
           </div>
+          <button class="colleague-btn ${isColleague ? 'active' : ''}" onclick="toggleColleague(event, '${escapeHTML(post.authors)}')" title="Connect as Colleague">
+            ${isColleague ? '✓ Colleagues' : '+ Colleague'}
+          </button>
         </div>
-        <span class="post-tag">${escapeHTML(post.field)}</span>
+        <span class="post-tag" onclick="filterByField('${escapeHTML(post.field)}')">${escapeHTML(post.field)}</span>
       </header>
 
       <!-- Horizontal Multi-Slide Carousel -->
@@ -731,56 +788,114 @@ function triggerDoubleTapLike(postId, container) {
   }, 880);
 }
 
-/**
- * Social Action Handlers
- */
-async function toggleLike(postId) {
-  const post = state.posts.find(p => p.id === postId);
-  if (!post) return;
+let pendingAuthAction = null;
 
-  const isLiked = state.likedPostIds.has(postId);
-  if (isLiked) {
-    state.likedPostIds.delete(postId);
-    post.likes = Math.max(0, (post.likes || 1) - 1);
+function requireAuth(actionCallback) {
+  if (state.currentUser) {
+    actionCallback();
   } else {
-    state.likedPostIds.add(postId);
-    post.likes = (post.likes || 0) + 1;
-    SupabaseBridge.recordInteraction(postId, 'like');
-  }
-
-  // Update DOM directly for instant response
-  const card = document.getElementById(`post-${postId}`);
-  if (card) {
-    const likeBtn = card.querySelector('.action-btn');
-    const likeCount = card.querySelector('.like-count');
-    if (likeBtn) likeBtn.classList.toggle('liked', !isLiked);
-    if (likeCount) likeCount.textContent = post.likes;
+    pendingAuthAction = actionCallback;
+    openAuthModal('signin');
   }
 }
 
-function toggleBookmark(postId) {
-  const isSaved = state.savedPostIds.has(postId);
-  if (isSaved) {
-    state.savedPostIds.delete(postId);
-  } else {
-    state.savedPostIds.add(postId);
-    SupabaseBridge.recordInteraction(postId, 'bookmark');
-  }
+/**
+ * Social Action Handlers (Auth-Gated)
+ */
+async function toggleLike(postId) {
+  requireAuth(() => {
+    const post = state.posts.find(p => p.id === postId);
+    if (!post) return;
 
-  updateSavedBadge();
+    const isLiked = state.likedPostIds.has(postId);
+    if (isLiked) {
+      state.likedPostIds.delete(postId);
+      post.likes = Math.max(0, (post.likes || 1) - 1);
+    } else {
+      state.likedPostIds.add(postId);
+      post.likes = (post.likes || 0) + 1;
+      SupabaseBridge.recordInteraction(postId, 'like');
+    }
 
-  if (state.showSavedOnly) {
-    renderFeed();
-  } else {
+    // Update DOM directly for instant response
     const card = document.getElementById(`post-${postId}`);
     if (card) {
-      const bookBtn = card.querySelectorAll('.action-btn')[2];
-      if (bookBtn) {
-        bookBtn.classList.toggle('bookmarked', !isSaved);
-        bookBtn.querySelector('span').textContent = !isSaved ? 'Saved' : 'Save';
+      const likeBtn = card.querySelector('.action-btn');
+      const likeCount = card.querySelector('.like-count');
+      if (likeBtn) likeBtn.classList.toggle('liked', !isLiked);
+      if (likeCount) likeCount.textContent = post.likes;
+    }
+  });
+}
+
+function toggleBookmark(postId) {
+  requireAuth(() => {
+    const isSaved = state.savedPostIds.has(postId);
+    if (isSaved) {
+      state.savedPostIds.delete(postId);
+    } else {
+      state.savedPostIds.add(postId);
+      SupabaseBridge.recordInteraction(postId, 'bookmark');
+    }
+
+    updateSavedBadge();
+
+    if (state.showSavedOnly) {
+      renderFeed();
+    } else {
+      const card = document.getElementById(`post-${postId}`);
+      if (card) {
+        const bookBtn = card.querySelectorAll('.action-btn')[2];
+        if (bookBtn) {
+          bookBtn.classList.toggle('bookmarked', !isSaved);
+          bookBtn.querySelector('span').textContent = !isSaved ? 'Saved' : 'Save';
+        }
       }
     }
-  }
+    if (state.activeView === 'profile') renderProfileView();
+  });
+}
+
+function toggleColleague(event, authorName) {
+  if (event) event.stopPropagation();
+  requireAuth(() => {
+    const isColleague = state.colleagues.has(authorName);
+    if (isColleague) {
+      state.colleagues.delete(authorName);
+    } else {
+      state.colleagues.add(authorName);
+    }
+    localStorage.setItem('folerio_colleagues', JSON.stringify([...state.colleagues]));
+
+    // Update all matching buttons
+    document.querySelectorAll('.colleague-btn').forEach(btn => {
+      if (btn.getAttribute('onclick')?.includes(authorName)) {
+        btn.classList.toggle('active', !isColleague);
+        btn.textContent = !isColleague ? '✓ Colleagues' : '+ Colleague';
+      }
+    });
+
+    if (state.activeView === 'profile') renderProfileView();
+  });
+}
+
+function toggleTrackTopic(topicName) {
+  requireAuth(() => {
+    const isTracked = state.trackedTopics.has(topicName);
+    if (isTracked) {
+      state.trackedTopics.delete(topicName);
+    } else {
+      state.trackedTopics.add(topicName);
+    }
+    localStorage.setItem('folerio_tracked_topics', JSON.stringify([...state.trackedTopics]));
+    renderExploreDisciplinesGrid();
+    if (state.activeView === 'profile') renderProfileView();
+  });
+}
+
+function filterByField(fieldName) {
+  switchMainView('feed');
+  syncTopicSelection(fieldName);
 }
 
 function toggleIlluminate(postId) {
@@ -1521,48 +1636,67 @@ function initEventListeners() {
   });
 
   // Instagram-Style Mobile Bottom Navigation Tabs (Phone Only)
+  // Mobile Bottom Navigation Tabs
   const mobileTabs = document.querySelectorAll('.mobile-nav-tab');
-  const setMobileActiveTab = (activeId) => {
+  window.setMobileActiveTab = (activeId) => {
     mobileTabs.forEach(tab => tab.classList.toggle('active', tab.id === activeId));
   };
 
   document.getElementById('mobileTabHome')?.addEventListener('click', () => {
-    setMobileActiveTab('mobileTabHome');
     state.showSavedOnly = false;
-    document.getElementById('navSavedBtn')?.classList.remove('active');
-    document.getElementById('navFeedBtn')?.classList.add('active');
     document.getElementById('filterSavedOnly')?.classList.remove('active');
     syncTopicSelection('all');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    switchMainView('feed');
   });
 
   document.getElementById('mobileTabExplore')?.addEventListener('click', () => {
-    setMobileActiveTab('mobileTabExplore');
-    const searchInput = document.getElementById('searchInput');
-    const topicsStrip = document.querySelector('.filter-strip');
-    if (topicsStrip) {
-      topicsStrip.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-    setTimeout(() => searchInput?.focus(), 250);
+    switchMainView('explore');
   });
 
   document.getElementById('mobileTabCreate')?.addEventListener('click', () => {
-    openFolioStudio();
+    requireAuth(openFolioStudio);
   });
 
   document.getElementById('mobileTabSaved')?.addEventListener('click', () => {
-    setMobileActiveTab('mobileTabSaved');
     state.showSavedOnly = true;
-    document.getElementById('navSavedBtn')?.classList.add('active');
-    document.getElementById('navFeedBtn')?.classList.remove('active');
     document.getElementById('filterSavedOnly')?.classList.add('active');
+    switchMainView('feed');
     renderFeed();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  document.getElementById('mobileTabTheme')?.addEventListener('click', () => {
-    toggleTheme();
+  document.getElementById('mobileTabAccount')?.addEventListener('click', () => {
+    switchMainView('profile');
   });
+
+  // Sidebar Menu Navigation Links
+  document.getElementById('navFeedBtn')?.addEventListener('click', () => {
+    state.showSavedOnly = false;
+    document.getElementById('filterSavedOnly')?.classList.remove('active');
+    syncTopicSelection('all');
+    switchMainView('feed');
+  });
+
+  document.getElementById('navExploreBtn')?.addEventListener('click', () => {
+    switchMainView('explore');
+  });
+
+  document.getElementById('navSavedBtn')?.addEventListener('click', () => {
+    state.showSavedOnly = true;
+    document.getElementById('filterSavedOnly')?.classList.add('active');
+    switchMainView('feed');
+    renderFeed();
+  });
+
+  document.getElementById('navCacheSettingsBtn')?.addEventListener('click', () => {
+    openCacheSettingsModal();
+  });
+
+  document.getElementById('sidebarProfileWidget')?.addEventListener('click', () => {
+    switchMainView('profile');
+  });
+
+  setupAuthModalListeners();
+  setupCacheSettingsListeners();
 
 
   // Share Modal
@@ -1628,4 +1762,590 @@ function formatDate(iso) {
   if (!iso) return 'Recent';
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/* ==========================================================================
+   View Router (Feed, Explore, Profile)
+   ========================================================================== */
+function switchMainView(viewName) {
+  state.activeView = viewName;
+
+  const feedView = document.getElementById('feedViewContainer');
+  const exploreView = document.getElementById('exploreViewContainer');
+  const profileView = document.getElementById('profileViewContainer');
+
+  if (feedView) feedView.style.display = viewName === 'feed' ? 'block' : 'none';
+  if (exploreView) exploreView.style.display = viewName === 'explore' ? 'block' : 'none';
+  if (profileView) profileView.style.display = viewName === 'profile' ? 'block' : 'none';
+
+  // Sidebar navigation active classes
+  document.querySelectorAll('.sidebar-menu .nav-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('data-nav') === viewName);
+  });
+
+  const viewText = document.getElementById('currentViewText');
+  if (viewName === 'feed') {
+    if (window.setMobileActiveTab) window.setMobileActiveTab('mobileTabHome');
+    if (viewText) viewText.textContent = state.showSavedOnly ? 'Saved Library' : 'Dispatch: All Fields';
+    renderFeed();
+  } else if (viewName === 'explore') {
+    if (window.setMobileActiveTab) window.setMobileActiveTab('mobileTabExplore');
+    if (viewText) viewText.textContent = 'Explore: Global Horizons';
+    renderExploreDisciplinesGrid();
+    renderExploreFeed();
+  } else if (viewName === 'profile') {
+    if (window.setMobileActiveTab) window.setMobileActiveTab('mobileTabAccount');
+    if (viewText) viewText.textContent = state.currentUser ? 'Scholar Profile' : 'Ghost Scholar (Guest)';
+    renderProfileView();
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ==========================================================================
+   Explore Disciplines Matrix & Unfollowed Breakthroughs
+   ========================================================================== */
+const EXPLORE_DISCIPLINES = [
+  { name: 'AI & Machine Learning', icon: '⚡', color: '#38bdf8' },
+  { name: 'Biotech & Genetics', icon: '🧬', color: '#34d399' },
+  { name: 'Neuroscience', icon: '🧠', color: '#a78bfa' },
+  { name: 'Quantum Computing', icon: '⚛️', color: '#fbbf24' },
+  { name: 'Astrophysics & Space', icon: '🔭', color: '#c084fc' },
+  { name: 'Materials Science', icon: '🔬', color: '#f59e0b' },
+  { name: 'Biophysics & Complexity', icon: '🪐', color: '#38bdf8' }
+];
+
+function renderExploreDisciplinesGrid() {
+  const container = document.getElementById('exploreDisciplinesGrid');
+  if (!container) return;
+
+  container.innerHTML = EXPLORE_DISCIPLINES.map(disc => {
+    const isTracked = state.trackedTopics.has(disc.name);
+    const count = state.posts.filter(p => p.field === disc.name).length;
+    return `
+      <div class="discipline-matrix-card" onclick="filterByField('${escapeHTML(disc.name)}')">
+        <div class="matrix-card-top">
+          <div class="matrix-icon-chip" style="border-color:${disc.color}40; background:${disc.color}15;">${disc.icon}</div>
+          <div>
+            <div class="matrix-card-title">${escapeHTML(disc.name)}</div>
+            <div class="matrix-card-count">${count} Folios</div>
+          </div>
+        </div>
+        <div class="matrix-card-bottom">
+          <span style="font-size:0.75rem; color:var(--text-muted);">Inspect &rarr;</span>
+          <button class="track-topic-btn ${isTracked ? 'active' : ''}" onclick="event.stopPropagation(); toggleTrackTopic('${escapeHTML(disc.name)}')">
+            ${isTracked ? '✓ Tracking' : '+ Track'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderExploreFeed() {
+  const container = document.getElementById('explorePostsFeed');
+  if (!container) return;
+
+  // Prefer unfollowed disciplines or breakthrough research
+  let unfollowed = state.posts.filter(p => !state.trackedTopics.has(p.field));
+  if (unfollowed.length < 6) {
+    unfollowed = state.posts.slice().reverse();
+  }
+
+  container.innerHTML = unfollowed.slice(0, 10).map(post => renderPostCard(post)).join('');
+  initCarousels();
+}
+
+/* ==========================================================================
+   Scholar Profile View (LinkedIn + Instagram Hybrid)
+   ========================================================================== */
+function renderProfileView() {
+  const container = document.getElementById('profileContentArea');
+  if (!container) return;
+
+  if (!state.currentUser) {
+    // Guest Mode / Ghost Scholar
+    container.innerHTML = `
+      <div class="profile-view-wrap">
+        <div class="ghost-profile-card">
+          <div class="ghost-avatar-big">👻</div>
+          <h2 class="ghost-title">Ghost Scholar</h2>
+          <div class="ghost-caption">Guest Reader · Unauthenticated</div>
+          <p class="ghost-desc">You are currently reading anonymously. Join the Folerio academic network to track disciplines, connect with colleagues, sync your saved library, and publish peer-grade Folios.</p>
+          <div class="ghost-action-row">
+            <button class="btn btn-primary" onclick="openAuthModal('signin')">Sign In</button>
+            <button class="btn btn-outline" onclick="openAuthModal('signup')">Create Scholar Account</button>
+          </div>
+        </div>
+
+        <div class="scholar-stats-row">
+          <div class="stat-col"><span class="stat-item-num">0</span><span class="stat-item-label">Published</span></div>
+          <div class="stat-col"><span class="stat-item-num">${state.colleagues.size}</span><span class="stat-item-label">Colleagues</span></div>
+          <div class="stat-col"><span class="stat-item-num">${state.trackedTopics.size}</span><span class="stat-item-label">Tracked Fields</span></div>
+          <div class="stat-col"><span class="stat-item-num">${state.savedPostIds.size}</span><span class="stat-item-label">Saved</span></div>
+        </div>
+      </div>
+    `;
+  } else {
+    // Authenticated Scholar
+    const u = state.currentUser;
+    const myFolios = state.posts.filter(p => (p.authors || '').includes(u.name) || p.id.startsWith('user-'));
+    const savedFolios = state.posts.filter(p => state.savedPostIds.has(p.id));
+
+    let tabContentHTML = '';
+    if (state.profileActiveTab === 'folios') {
+      tabContentHTML = myFolios.length > 0
+        ? `<div class="posts-feed">${myFolios.map(p => renderPostCard(p)).join('')}</div>`
+        : `<div class="empty-state" style="padding:2rem 1rem;"><p>You haven't drafted any Folios yet.</p><button class="btn btn-primary btn-sm" onclick="openFolioStudio()" style="margin-top:0.5rem;">Draft First Folio</button></div>`;
+    } else if (state.profileActiveTab === 'saved') {
+      tabContentHTML = savedFolios.length > 0
+        ? `<div class="posts-feed">${savedFolios.map(p => renderPostCard(p)).join('')}</div>`
+        : `<div class="empty-state" style="padding:2rem 1rem;"><p>No saved folios in your library yet.</p></div>`;
+    } else if (state.profileActiveTab === 'colleagues') {
+      tabContentHTML = state.colleagues.size > 0
+        ? `<div style="display:flex; flex-direction:column; gap:0.5rem;">${[...state.colleagues].map(c => `
+          <div style="background:var(--bg-surface); padding:0.75rem 1rem; border-radius:var(--radius-sm); border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:600; font-size:0.88rem;">${escapeHTML(c)}</span>
+            <button class="colleague-btn active" onclick="toggleColleague(event, '${escapeHTML(c)}')">✓ Connected</button>
+          </div>
+        `).join('')}</div>`
+        : `<div class="empty-state" style="padding:2rem 1rem;"><p>No colleagues connected yet. Tap <strong>+ Colleague</strong> on paper headers to connect.</p></div>`;
+    } else if (state.profileActiveTab === 'topics') {
+      tabContentHTML = state.trackedTopics.size > 0
+        ? `<div style="display:flex; flex-direction:column; gap:0.5rem;">${[...state.trackedTopics].map(t => `
+          <div style="background:var(--bg-surface); padding:0.75rem 1rem; border-radius:var(--radius-sm); border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:600; font-size:0.88rem;">${escapeHTML(t)}</span>
+            <button class="track-topic-btn active" onclick="toggleTrackTopic('${escapeHTML(t)}')">✓ Tracking</button>
+          </div>
+        `).join('')}</div>`
+        : `<div class="empty-state" style="padding:2rem 1rem;"><p>No disciplines tracked yet. Head to Explore to track fields.</p></div>`;
+    }
+
+    container.innerHTML = `
+      <div class="profile-view-wrap">
+        <div class="scholar-profile-card">
+          <div class="scholar-header-row">
+            <div class="scholar-avatar-circle">${escapeHTML(u.avatarInitials || getInitials(u.name))}</div>
+            <div class="scholar-meta-col">
+              <div class="scholar-name-row">
+                <h2 class="scholar-name-h2">${escapeHTML(u.name)}</h2>
+                <span class="verified-scholar-chip">✓ Verified Scholar</span>
+              </div>
+              <div class="scholar-affiliation">${escapeHTML(u.institution || 'Research Scholar')}</div>
+              <div class="scholar-lab">${escapeHTML(u.department || 'Independent Investigator')}</div>
+            </div>
+          </div>
+
+          <!-- LinkedIn Credentials Box -->
+          <div class="scholar-credentials-box">
+            <div class="credential-row">
+              <span class="credential-label">Primary Field:</span>
+              <span class="credential-value">${escapeHTML(u.field || 'General Science')}</span>
+            </div>
+            ${u.orcid ? `<div class="credential-row"><span class="credential-label">ORCID iD:</span><span class="credential-value" style="color:var(--accent-cyan);">${escapeHTML(u.orcid)}</span></div>` : ''}
+            ${u.bio ? `<div class="credential-row" style="flex-direction:column; gap:2px;"><span class="credential-label">Research Focus:</span><span class="credential-value" style="color:var(--text-secondary);">${escapeHTML(u.bio)}</span></div>` : ''}
+          </div>
+
+          <!-- Instagram Stats Row -->
+          <div class="scholar-stats-row">
+            <div class="stat-col"><span class="stat-item-num">${myFolios.length}</span><span class="stat-item-label">Published</span></div>
+            <div class="stat-col"><span class="stat-item-num">${state.colleagues.size}</span><span class="stat-item-label">Colleagues</span></div>
+            <div class="stat-col"><span class="stat-item-num">${state.trackedTopics.size}</span><span class="stat-item-label">Tracked Fields</span></div>
+            <div class="stat-col"><span class="stat-item-num">${savedFolios.length}</span><span class="stat-item-label">Saved</span></div>
+          </div>
+
+          <div class="scholar-buttons-row">
+            <button class="btn btn-outline btn-sm" onclick="openEditProfileModal()">Edit Profile</button>
+            <button class="btn btn-outline btn-sm" onclick="openCacheSettingsModal()">Offline & Storage</button>
+            <button class="btn btn-danger-outline btn-sm" onclick="signOutScholar()">Log Out</button>
+          </div>
+        </div>
+
+        <!-- Activity Tabs -->
+        <div class="profile-tabs-strip">
+          <button class="profile-tab-btn ${state.profileActiveTab === 'folios' ? 'active' : ''}" onclick="setProfileTab('folios')">My Folios (${myFolios.length})</button>
+          <button class="profile-tab-btn ${state.profileActiveTab === 'saved' ? 'active' : ''}" onclick="setProfileTab('saved')">Saved Library (${savedFolios.length})</button>
+          <button class="profile-tab-btn ${state.profileActiveTab === 'colleagues' ? 'active' : ''}" onclick="setProfileTab('colleagues')">Colleagues (${state.colleagues.size})</button>
+          <button class="profile-tab-btn ${state.profileActiveTab === 'topics' ? 'active' : ''}" onclick="setProfileTab('topics')">Tracked Fields (${state.trackedTopics.size})</button>
+        </div>
+
+        <div id="profileTabBody">
+          ${tabContentHTML}
+        </div>
+      </div>
+    `;
+    initCarousels();
+  }
+}
+
+function setProfileTab(tabName) {
+  state.profileActiveTab = tabName;
+  renderProfileView();
+}
+
+function updateAuthUI() {
+  const emoji = document.getElementById('mobileAccountEmoji');
+  const label = document.getElementById('mobileAccountLabel');
+  const sidebarAvatarText = document.getElementById('sidebarAvatarText');
+  const sidebarProfileName = document.getElementById('sidebarProfileName');
+  const sidebarProfileCaption = document.getElementById('sidebarProfileCaption');
+
+  if (state.currentUser) {
+    const initials = state.currentUser.avatarInitials || getInitials(state.currentUser.name);
+    if (emoji) emoji.textContent = initials;
+    if (label) label.textContent = state.currentUser.name.split(' ')[0] || 'Profile';
+    if (sidebarAvatarText) sidebarAvatarText.textContent = initials;
+    if (sidebarProfileName) sidebarProfileName.textContent = state.currentUser.name;
+    if (sidebarProfileCaption) sidebarProfileCaption.textContent = 'Active Scholar';
+  } else {
+    if (emoji) emoji.textContent = '👻';
+    if (label) label.textContent = 'Account';
+    if (sidebarAvatarText) sidebarAvatarText.textContent = '👻';
+    if (sidebarProfileName) sidebarProfileName.textContent = 'Ghost Scholar';
+    if (sidebarProfileCaption) sidebarProfileCaption.textContent = 'Guest · Tap to Join';
+  }
+}
+
+/* ==========================================================================
+   Authentication Handlers (Email, Phone OTP, Demo Scholar)
+   ========================================================================== */
+function openAuthModal(defaultTab = 'signin') {
+  const modal = document.getElementById('authModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  setAuthTab(defaultTab);
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById('authModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function setAuthTab(tab) {
+  const signInBtn = document.getElementById('authTabSignIn');
+  const signUpBtn = document.getElementById('authTabSignUp');
+  const nameGroup = document.getElementById('authNameGroup');
+  const heading = document.getElementById('authModalHeading');
+  const submitBtn = document.getElementById('authEmailSubmitBtn');
+
+  if (tab === 'signup') {
+    signInBtn?.classList.remove('active');
+    signUpBtn?.classList.add('active');
+    if (nameGroup) nameGroup.style.display = 'block';
+    if (heading) heading.textContent = 'Create Scholar Account';
+    if (submitBtn) submitBtn.textContent = 'Join Folerio Network';
+  } else {
+    signInBtn?.classList.add('active');
+    signUpBtn?.classList.remove('active');
+    if (nameGroup) nameGroup.style.display = 'none';
+    if (heading) heading.textContent = 'Sign In to Folerio';
+    if (submitBtn) submitBtn.textContent = 'Sign In with Email';
+  }
+}
+
+function signInUser(userProfile) {
+  state.currentUser = userProfile;
+  localStorage.setItem('folerio_user_profile', JSON.stringify(userProfile));
+  updateAuthUI();
+  closeAuthModal();
+  if (state.activeView === 'profile') renderProfileView();
+  if (pendingAuthAction) {
+    const act = pendingAuthAction;
+    pendingAuthAction = null;
+    act();
+  }
+}
+
+function signOutScholar() {
+  state.currentUser = null;
+  localStorage.removeItem('folerio_user_profile');
+  updateAuthUI();
+  if (state.activeView === 'profile') renderProfileView();
+}
+
+function setupAuthModalListeners() {
+  document.getElementById('closeAuthModalBtn')?.addEventListener('click', closeAuthModal);
+  document.getElementById('authTabSignIn')?.addEventListener('click', () => setAuthTab('signin'));
+  document.getElementById('authTabSignUp')?.addEventListener('click', () => setAuthTab('signup'));
+
+  const methodEmailBtn = document.getElementById('methodEmailBtn');
+  const methodPhoneBtn = document.getElementById('methodPhoneBtn');
+  const emailForm = document.getElementById('authEmailForm');
+  const phoneForm = document.getElementById('authPhoneForm');
+
+  methodEmailBtn?.addEventListener('click', () => {
+    methodEmailBtn.classList.add('active');
+    methodPhoneBtn?.classList.remove('active');
+    emailForm.style.display = 'block';
+    phoneForm.style.display = 'none';
+  });
+
+  methodPhoneBtn?.addEventListener('click', () => {
+    methodPhoneBtn.classList.add('active');
+    methodEmailBtn?.classList.remove('active');
+    phoneForm.style.display = 'block';
+    emailForm.style.display = 'none';
+  });
+
+  // Email Submit
+  emailForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('authEmailInput')?.value || 'scholar@university.edu';
+    const fullName = document.getElementById('authFullNameInput')?.value || email.split('@')[0];
+    signInUser({
+      id: 'scholar-' + Date.now(),
+      name: fullName,
+      title: 'Peer Scholar',
+      institution: email.includes('.edu') ? email.split('@')[1] : 'Independent Scholar',
+      department: 'Faculty of Science',
+      field: 'Interdisciplinary Studies',
+      avatarInitials: getInitials(fullName)
+    });
+  });
+
+  // Phone OTP Flow
+  document.getElementById('sendOtpBtn')?.addEventListener('click', () => {
+    const phone = document.getElementById('authPhoneInput')?.value;
+    if (!phone) {
+      alert('Please enter your mobile phone number.');
+      return;
+    }
+    document.getElementById('phoneStep1').style.display = 'none';
+    document.getElementById('phoneStep2').style.display = 'block';
+  });
+
+  document.getElementById('verifyOtpBtn')?.addEventListener('click', () => {
+    const otp = document.getElementById('authOtpInput')?.value;
+    if (otp === '123456' || (otp && otp.length === 6)) {
+      const phone = document.getElementById('authPhoneInput')?.value || '+1000';
+      signInUser({
+        id: 'phone-' + Date.now(),
+        name: 'Scholar ' + phone.slice(-4),
+        title: 'Verified Scholar',
+        institution: 'Global Scholar Network',
+        department: 'Advanced Research',
+        field: 'Frontier Sciences',
+        avatarInitials: 'SC'
+      });
+    } else {
+      alert('Verification code is 123456 for demo verification.');
+    }
+  });
+
+  // One-Click Demo Login as Dr. Ihtisham Naeem
+  document.getElementById('authDemoScholarBtn')?.addEventListener('click', () => {
+    signInUser(DEMO_SCHOLAR_PROFILE);
+  });
+
+  // Edit Profile Modal
+  document.getElementById('closeEditProfileBtn')?.addEventListener('click', closeEditProfileModal);
+  document.getElementById('cancelEditProfileBtn')?.addEventListener('click', closeEditProfileModal);
+  document.getElementById('editProfileForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!state.currentUser) return;
+    state.currentUser.name = document.getElementById('editNameInput').value;
+    state.currentUser.institution = document.getElementById('editInstitutionInput').value;
+    state.currentUser.department = document.getElementById('editDepartmentInput').value;
+    state.currentUser.field = document.getElementById('editFieldInput').value;
+    state.currentUser.orcid = document.getElementById('editOrcidInput').value;
+    state.currentUser.bio = document.getElementById('editBioInput').value;
+    state.currentUser.avatarInitials = getInitials(state.currentUser.name);
+
+    localStorage.setItem('folerio_user_profile', JSON.stringify(state.currentUser));
+    updateAuthUI();
+    closeEditProfileModal();
+    renderProfileView();
+  });
+}
+
+function openEditProfileModal() {
+  if (!state.currentUser) return;
+  const modal = document.getElementById('editProfileModal');
+  if (!modal) return;
+  document.getElementById('editNameInput').value = state.currentUser.name || '';
+  document.getElementById('editInstitutionInput').value = state.currentUser.institution || '';
+  document.getElementById('editDepartmentInput').value = state.currentUser.department || '';
+  document.getElementById('editFieldInput').value = state.currentUser.field || '';
+  document.getElementById('editOrcidInput').value = state.currentUser.orcid || '';
+  document.getElementById('editBioInput').value = state.currentUser.bio || '';
+  modal.style.display = 'flex';
+}
+
+function closeEditProfileModal() {
+  const modal = document.getElementById('editProfileModal');
+  if (modal) modal.style.display = 'none';
+}
+
+/* ==========================================================================
+   Offline Storage & Cache Settings Handlers
+   ========================================================================== */
+async function openCacheSettingsModal() {
+  const modal = document.getElementById('cacheSettingsModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  if (typeof FolioCacheDB !== 'undefined') {
+    const stats = await FolioCacheDB.getStorageEstimate();
+    const countEl = document.getElementById('cacheTotalCount');
+    const sizeEl = document.getElementById('cacheTotalSize');
+    if (countEl) countEl.textContent = stats.count.toLocaleString();
+    if (sizeEl) sizeEl.textContent = `${stats.sizeMB} MB`;
+
+    const settings = await FolioCacheDB.getSettings();
+    document.querySelectorAll('.capacity-chip').forEach(chip => {
+      chip.classList.toggle('active', parseInt(chip.dataset.capacity) === settings.capacity);
+    });
+    const retentionSelect = document.getElementById('retentionPolicySelect');
+    if (retentionSelect) retentionSelect.value = String(settings.retentionDays);
+  }
+}
+
+function closeCacheSettingsModal() {
+  const modal = document.getElementById('cacheSettingsModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function setupCacheSettingsListeners() {
+  document.getElementById('closeCacheSettingsBtn')?.addEventListener('click', closeCacheSettingsModal);
+
+  // Capacity selector chips
+  document.querySelectorAll('.capacity-chip').forEach(chip => {
+    chip.addEventListener('click', async () => {
+      const cap = parseInt(chip.dataset.capacity);
+      document.querySelectorAll('.capacity-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+
+      if (typeof FolioCacheDB !== 'undefined') {
+        const cur = await FolioCacheDB.getSettings();
+        cur.capacity = cap;
+        await FolioCacheDB.saveSettings(cur);
+        await FolioCacheDB.enforceCapacity(cap);
+        const stats = await FolioCacheDB.getStorageEstimate();
+        document.getElementById('cacheTotalCount').textContent = stats.count.toLocaleString();
+        document.getElementById('cacheTotalSize').textContent = `${stats.sizeMB} MB`;
+      }
+    });
+  });
+
+  // Retention selector
+  document.getElementById('retentionPolicySelect')?.addEventListener('change', async (e) => {
+    const days = parseInt(e.target.value);
+    if (typeof FolioCacheDB !== 'undefined') {
+      const cur = await FolioCacheDB.getSettings();
+      cur.retentionDays = days;
+      await FolioCacheDB.saveSettings(cur);
+      await FolioCacheDB.enforceRetentionPolicy();
+    }
+  });
+
+  // Clear cache button
+  document.getElementById('clearCacheBtn')?.addEventListener('click', async () => {
+    if (confirm('Clear all offline cached folios from IndexedDB?')) {
+      if (typeof FolioCacheDB !== 'undefined') {
+        await FolioCacheDB.clearAllCache();
+        document.getElementById('cacheTotalCount').textContent = '0';
+        document.getElementById('cacheTotalSize').textContent = '0.00 MB';
+        alert('Offline cache cleared.');
+      }
+    }
+  });
+
+  // Sync fresh folios button
+  document.getElementById('syncFreshCacheBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('syncFreshCacheBtn');
+    if (btn) btn.textContent = '⏳ Syncing...';
+    await loadPosts();
+    if (btn) btn.textContent = '✓ Synced!';
+    setTimeout(() => {
+      if (btn) btn.textContent = '🔄 Sync Fresh Folios';
+      openCacheSettingsModal();
+    }, 1200);
+  });
+}
+
+/* ==========================================================================
+   Offline Status & Banner Listeners
+   ========================================================================== */
+function updateOfflineStatusBanner() {
+  const banner = document.getElementById('offlineStatusBanner');
+  const countBadge = document.getElementById('offlineCountBadge');
+  if (!banner) return;
+
+  const isOffline = !navigator.onLine;
+  banner.style.display = isOffline ? 'block' : 'none';
+  if (countBadge && isOffline) {
+    countBadge.textContent = `${state.posts.length} Folios Cached`;
+  }
+}
+
+function initOfflineListeners() {
+  window.addEventListener('online', () => {
+    updateOfflineStatusBanner();
+    if (typeof FolioCacheDB !== 'undefined') {
+      FolioCacheDB.cacheFolios(state.posts, 'frontier').catch(console.warn);
+    }
+  });
+  window.addEventListener('offline', updateOfflineStatusBanner);
+  updateOfflineStatusBanner();
+}
+
+/* ==========================================================================
+   Edge-Swipe Gestures (Native iPhone/Android Physics)
+   ========================================================================== */
+function initEdgeSwipeGestures() {
+  const sidebarNav = document.getElementById('sidebarNav');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  let startX = 0;
+  let startY = 0;
+  let isTracking = false;
+
+  window.addEventListener('touchstart', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+
+    const isEdgeStart = startX < 45 && !sidebarNav?.classList.contains('mobile-open');
+    const isDrawerOpen = sidebarNav?.classList.contains('mobile-open');
+
+    if (isEdgeStart || isDrawerOpen) {
+      isTracking = true;
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!isTracking || !e.touches || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    // If mainly vertical scroll, cancel tracking
+    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 20) {
+      isTracking = false;
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchend', (e) => {
+    if (!isTracking) return;
+    isTracking = false;
+    const touch = e.changedTouches ? e.changedTouches[0] : null;
+    if (!touch) return;
+
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      if (deltaX > 45 && !sidebarNav?.classList.contains('mobile-open') && startX < 60) {
+        // Swiped right from left edge: open drawer
+        sidebarNav?.classList.add('mobile-open');
+        sidebarOverlay?.classList.add('active');
+        document.body.classList.add('menu-locked');
+      } else if (deltaX < -45 && sidebarNav?.classList.contains('mobile-open')) {
+        // Swiped left while open: close drawer
+        sidebarNav?.classList.remove('mobile-open');
+        sidebarOverlay?.classList.remove('active');
+        document.body.classList.remove('menu-locked');
+      }
+    }
+  }, { passive: true });
 }
