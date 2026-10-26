@@ -30,6 +30,11 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Setup Android SDK Platform & Accept Licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-36" "build-tools;36.0.0" || true
+
       - name: Make Gradle Executable
         run: chmod +x android/gradlew
 
@@ -44,19 +49,25 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleDebug --stacktrace 2>&1 | tee ../gradle-build.log || { echo "=== GRADLE FAILURE LOG ==="; tail -n 80 ../gradle-build.log; exit 1; }
+          ./gradlew assembleDebug --stacktrace
 
       - name: Copy & Rename APK
         run: |
           mkdir -p output
-          find android -type f -name "*.apk" -exec cp -v {} output/Folerio.apk \;
-          ls -la output/
+          find android/app/build/outputs/apk -type f -name "*.apk" -exec cp -v {} output/Folerio.apk \;
+          if [ ! -f output/Folerio.apk ]; then
+            echo "ERROR: Folerio.apk was not generated!"
+            find android -name "*.apk"
+            exit 1
+          fi
+          ls -lh output/Folerio.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Folerio-Android-APK
           path: output/Folerio.apk
+          if-no-files-found: error
           retention-days: 30
 
       - name: Publish Direct Release APK
