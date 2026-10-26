@@ -401,8 +401,13 @@ function initInfiniteScroll() {
   if (state.hasInitializedScroll) return;
   state.hasInitializedScroll = true;
 
+  const topBar = document.querySelector('.app-topbar');
+  const filterStrip = document.getElementById('filterStrip');
+  let lastScrollY = window.scrollY;
+  let ticking = false;
+
   window.addEventListener('scroll', () => {
-    // Check if scrolled near bottom
+    // Check if scrolled near bottom for virtual pagination
     if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 900) {
       const filteredCount = state.posts.filter(p => {
         if (state.currentTopic !== 'all' && p.field !== state.currentTopic) return false;
@@ -414,6 +419,34 @@ function initInfiniteScroll() {
         state.pageLimit += 10;
         renderFeed();
       }
+    }
+
+    // Scroll Direction Detection for Instagram-Style Sticky Header & Topic Bar
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        const diff = currentScrollY - lastScrollY;
+
+        if (currentScrollY <= 25) {
+          // At very top: show topbar and default filter bar position
+          topBar?.classList.remove('nav-hidden');
+          filterStrip?.classList.remove('topics-sticky-show', 'topics-hidden');
+        } else if (diff > 8 && currentScrollY > 75) {
+          // Scrolling DOWN: minimize/hide topbar and filter bar for full reading immersion
+          topBar?.classList.add('nav-hidden');
+          filterStrip?.classList.add('topics-hidden');
+          filterStrip?.classList.remove('topics-sticky-show');
+        } else if (diff < -8) {
+          // Scrolling UP even slightly: slide both smoothly back into view at top!
+          topBar?.classList.remove('nav-hidden');
+          filterStrip?.classList.remove('topics-hidden');
+          filterStrip?.classList.add('topics-sticky-show');
+        }
+
+        lastScrollY = currentScrollY;
+        ticking = false;
+      });
+      ticking = true;
     }
   }, { passive: true });
 }
@@ -490,11 +523,11 @@ function renderPostCard(post) {
         <div class="author-info">
           <div class="author-avatar">${getInitials(post.authors)}</div>
           <div class="author-meta">
-            <span class="author-name">${post.authors}</span>
-            <span class="author-sub">${post.field} · ${formatDate(post.createdAt)}</span>
+            <span class="author-name">${escapeHTML(post.authors)}</span>
+            <span class="author-sub">${formatDate(post.createdAt)}</span>
           </div>
         </div>
-        <span class="post-tag">${post.field}</span>
+        <span class="post-tag">${escapeHTML(post.field)}</span>
       </header>
 
       <!-- Horizontal Multi-Slide Carousel -->
@@ -1444,12 +1477,47 @@ function initEventListeners() {
   document.getElementById('closeCreatePostBtn')?.addEventListener('click', () => createModal.style.display = 'none');
   document.getElementById('cancelPostBtn')?.addEventListener('click', () => createModal.style.display = 'none');
 
-  // Mobile menu toggle
-  document.getElementById('mobileMenuToggle')?.addEventListener('click', () => {
-    document.getElementById('sidebarNav')?.classList.toggle('mobile-open');
+  // Mobile menu drawer with backdrop overlay & outside-click close
+  const sidebarNav = document.getElementById('sidebarNav');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+
+  const openMobileMenu = () => {
+    sidebarNav?.classList.add('mobile-open');
+    sidebarOverlay?.classList.add('active');
+    document.body.classList.add('menu-locked');
+  };
+
+  const closeMobileMenu = () => {
+    sidebarNav?.classList.remove('mobile-open');
+    sidebarOverlay?.classList.remove('active');
+    document.body.classList.remove('menu-locked');
+  };
+
+  mobileMenuToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (sidebarNav?.classList.contains('mobile-open')) {
+      closeMobileMenu();
+    } else {
+      openMobileMenu();
+    }
   });
-  document.getElementById('sidebarCollapseBtn')?.addEventListener('click', () => {
-    document.getElementById('sidebarNav')?.classList.remove('mobile-open');
+
+  sidebarOverlay?.addEventListener('click', closeMobileMenu);
+  document.getElementById('sidebarCollapseBtn')?.addEventListener('click', closeMobileMenu);
+
+  // Tapping empty space outside sidebar closes it
+  document.addEventListener('click', (e) => {
+    if (sidebarNav?.classList.contains('mobile-open')) {
+      if (!sidebarNav.contains(e.target) && e.target !== mobileMenuToggle && !mobileMenuToggle?.contains(e.target)) {
+        closeMobileMenu();
+      }
+    }
+  });
+
+  // Tapping any sidebar navigation link closes the drawer automatically
+  sidebarNav?.querySelectorAll('.nav-item, .discipline-nav-item, .theme-toggle-row').forEach(item => {
+    item.addEventListener('click', closeMobileMenu);
   });
 
   // Instagram-Style Mobile Bottom Navigation Tabs (Phone Only)

@@ -2,7 +2,11 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0e18">
   <title>Folerio — The Scholarly Folio & Discovery Network</title>
   <meta name="description" content="A visual intellectual discourse platform for scientists and researchers. Transform complex scientific literature into elegant, swipeable multi-slide Folios.">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M6 8C6 6.9 6.9 6 8 6H17L21 10V22C21 23.1 20.1 24 19 24H8C6.9 24 6 23.1 6 22V8Z' fill='%231e293b' stroke='%23818cf8' stroke-width='1.5' stroke-opacity='0.6'/%3E%3Cpath d='M11 5C11 3.9 11.9 3 13 3H22L26 7V25C26 26.1 25.1 27 24 27H13C11.9 27 11 26.1 11 25V5Z' fill='%230f172a' stroke='%2338bdf8' stroke-width='2'/%3E%3Cpath d='M22 3V7H26' stroke='%2338bdf8' stroke-width='2' fill='%2338bdf8' fill-opacity='0.5'/%3E%3Cpath d='M18.5 10.5L21 15L18.5 19.5L16 15Z' fill='%2338bdf8' stroke='%23ffffff' stroke-width='1.2'/%3E%3Ccircle cx='18.5' cy='15' r='1.5' fill='%23ffffff'/%3E%3C/svg%3E">
@@ -169,6 +173,9 @@
       </div>
     </aside>
 
+    <!-- Blurred backdrop overlay to close mobile sidebar on tap empty space -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Main Fluid Viewport -->
     <div class="main-viewport">
       <!-- Top Contextual Bar -->
@@ -225,26 +232,26 @@
           <div class="mode-switch-pill">
             <button class="mode-tab active" id="modeFrontierBtn" data-mode="frontier" title="Cutting-edge frontier papers">
               <span class="mode-icon">⚡</span>
-              <span class="mode-label">Frontier Research</span>
+              <span class="mode-label">Frontier</span>
             </button>
             <button class="mode-tab" id="modePrimerBtn" data-mode="primer" title="Learn the core first-principles & fundamentals from scratch">
               <span class="mode-icon">🌱</span>
-              <span class="mode-label">Foundations (Basics)</span>
+              <span class="mode-label">Foundations</span>
               <span class="mode-tag-badge">101</span>
             </button>
           </div>
         </div>
 
         <!-- Horizontal Discipline Filter Strip -->
-        <section class="filter-strip">
+        <section class="filter-strip" id="filterStrip">
           <div class="topics-wrapper">
-            <button class="topic-pill active" data-topic="all">All Disciplines</button>
-            <button class="topic-pill" data-topic="AI & Machine Learning">⚡ AI & Machine Learning</button>
-            <button class="topic-pill" data-topic="Biotech & Genetics">🧬 Biotech & Genetics</button>
+            <button class="topic-pill active" data-topic="all">✦ All (Mix)</button>
+            <button class="topic-pill" data-topic="AI & Machine Learning">⚡ AI & ML</button>
+            <button class="topic-pill" data-topic="Biotech & Genetics">🧬 Genetics</button>
             <button class="topic-pill" data-topic="Neuroscience">🧠 Neuroscience</button>
-            <button class="topic-pill" data-topic="Quantum Computing">⚛️ Quantum Computing</button>
-            <button class="topic-pill" data-topic="Astrophysics & Space">🔭 Astrophysics & Space</button>
-            <button class="topic-pill" data-topic="Materials Science">🔬 Materials Science</button>
+            <button class="topic-pill" data-topic="Quantum Computing">⚛️ Quantum</button>
+            <button class="topic-pill" data-topic="Astrophysics & Space">🔭 Astrophysics</button>
+            <button class="topic-pill" data-topic="Materials Science">🔬 Materials</button>
           </div>
 
           <div class="filter-toggles">

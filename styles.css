@@ -78,6 +78,15 @@
   padding: 0;
 }
 
+html, body {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
@@ -87,6 +96,17 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+body.menu-locked {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Allow text selection in readable scientific texts & inputs */
+.post-slide, .book-page-container, .slide-hero-body, .slide-dive-body, input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Typography */
@@ -113,6 +133,26 @@ a:hover {
   min-height: 100vh;
   width: 100vw;
   background-color: var(--bg-primary);
+}
+
+/* Sidebar Overlay Backdrop on Mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  pointer-events: none;
+}
+
+.sidebar-overlay.active {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* ==========================================================================
@@ -1987,28 +2027,33 @@ input:focus, select:focus, textarea:focus {
     position: sticky;
     top: 0;
     z-index: 100;
-    padding: 0.65rem 0.85rem;
+    padding: 0.55rem 0.75rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(10, 14, 24, 0.94);
+    background: rgba(10, 14, 24, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border-subtle);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .app-topbar.nav-hidden {
+    transform: translateY(-100%);
   }
 
   .mobile-brand-title {
     display: flex !important;
     align-items: center;
-    gap: 0.5rem;
-    margin-left: 0.25rem;
-    margin-right: 0.5rem;
+    gap: 0.45rem;
+    margin-left: 0.15rem;
+    margin-right: 0.4rem;
     flex-shrink: 0;
   }
 
   .mobile-brand-name {
     font-family: var(--font-sans);
-    font-size: 1.05rem;
+    font-size: 0.98rem;
     font-weight: 800;
     letter-spacing: 0.12em;
     background: linear-gradient(135deg, #ffffff 30%, var(--accent-cyan) 100%);
@@ -2030,9 +2075,9 @@ input:focus, select:focus, textarea:focus {
   }
 
   .search-bar input {
-    height: 36px;
-    font-size: 0.85rem;
-    padding: 0 0.75rem 0 2rem;
+    height: 34px;
+    font-size: 0.82rem;
+    padding: 0 0.75rem 0 1.9rem;
   }
 
   .topbar-right #topDraftFolioBtn {
@@ -2041,25 +2086,65 @@ input:focus, select:focus, textarea:focus {
 
   /* Viewport Layout on Mobile */
   .app-fluid-content {
-    padding: 0.5rem 0.5rem calc(72px + env(safe-area-inset-bottom, 12px)) 0.5rem;
+    padding: 0.45rem 0.45rem calc(72px + env(safe-area-inset-bottom, 12px)) 0.45rem;
   }
 
-  /* Horizontal Stories / Disciplines Strip */
+  /* Compact Mode Switch Strip (Frontier vs Foundations 101) */
+  .feed-mode-strip {
+    margin-bottom: 0.45rem;
+  }
+
+  .mode-switch-pill {
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .mode-tab {
+    padding: 0.26rem 0.62rem;
+    font-size: 0.74rem;
+    gap: 0.25rem;
+  }
+
+  .mode-tab .mode-icon {
+    font-size: 0.76rem;
+  }
+
+  .mode-tag-badge {
+    font-size: 0.58rem;
+    padding: 0 4px;
+  }
+
+  /* Horizontal Disciplines Strip (Sticky & Smart-Hide on Scroll) */
   .filter-strip {
-    margin-bottom: 0.75rem;
-    padding: 0.35rem 0;
-    background: transparent;
+    position: sticky;
+    top: 50px;
+    z-index: 95;
+    background: rgba(10, 14, 24, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 0.45rem;
+    padding: 0.3rem 0;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease;
+  }
+
+  .filter-strip.topics-hidden {
+    transform: translateY(-160%);
+  }
+
+  .filter-strip.topics-sticky-show {
+    transform: translateY(0);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
   }
 
   .topics-wrapper {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.35rem;
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
-    padding: 2px 4px 6px 4px;
+    padding: 2px 6px 4px 6px;
   }
   .topics-wrapper::-webkit-scrollbar {
     display: none;
@@ -2067,8 +2152,8 @@ input:focus, select:focus, textarea:focus {
 
   .topic-pill {
     flex-shrink: 0;
-    font-size: 0.8rem;
-    padding: 0.45rem 0.85rem;
+    font-size: 0.72rem;
+    padding: 0.28rem 0.65rem;
     border-radius: 9999px;
     touch-action: manipulation;
   }
@@ -2085,112 +2170,152 @@ input:focus, select:focus, textarea:focus {
     display: none;
   }
 
-  /* Edge-to-Edge Instagram Feed on Phone */
+  /* Seamless Instagram Feed Flow on Phone */
   .feed-container {
     padding: 0;
     max-width: 100%;
   }
 
+  .posts-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
   .post-card-wrapper {
-    border-radius: 12px;
-    margin: 0 0 1rem 0;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    margin: 0 0 0.55rem 0;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--border-subtle);
     overflow: hidden;
   }
 
   .post-header {
-    padding: 0.75rem 0.95rem;
+    padding: 0.55rem 0.75rem;
+    align-items: center;
   }
 
   .author-avatar {
-    width: 36px;
-    height: 36px;
-    font-size: 0.8rem;
+    width: 32px;
+    height: 32px;
+    font-size: 0.72rem;
     border-width: 1.5px;
   }
 
+  .author-info {
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  .author-meta {
+    min-width: 0;
+  }
+
   .author-name {
-    font-size: 0.88rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
   }
 
   .author-sub {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
+    color: var(--text-muted);
   }
 
   .post-tag {
-    font-size: 0.68rem;
-    padding: 2px 6px;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    letter-spacing: 0.02em;
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* Carousel Proportions for Phone (Instagram Portrait Feel) */
+  /* Carousel Proportions for Phone (Instagram 4:5 / 1:1.05 Portrait Ratio) */
   .carousel-container {
-    aspect-ratio: 4 / 4.4;
-    min-height: 380px;
+    aspect-ratio: 1 / 1.05;
+    min-height: 330px;
+    touch-action: pan-x pan-y;
   }
 
   .post-slide {
-    padding: 1.5rem 1.25rem; /* Generous text width, no squishing! */
+    padding: 1.15rem 1rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
   }
 
   .paper-hero-title {
-    font-size: 1.35rem;
-    line-height: 1.35;
-    margin-bottom: 0.85rem;
+    font-size: 1.05rem;
+    line-height: 1.32;
+    margin-bottom: 0.55rem;
+    letter-spacing: -0.015em;
   }
 
-  .hero-hook-text {
-    font-size: 0.98rem;
-    line-height: 1.55;
-  }
-
-  .slide-inner-title {
-    font-size: 1.15rem;
+  .breakthrough-hook {
+    font-size: 0.82rem;
+    line-height: 1.48;
+    padding-left: 0.75rem;
     margin-bottom: 0.65rem;
   }
 
-  .slide-inner-body {
-    font-size: 0.92rem;
-    line-height: 1.6;
+  .dive-section-tag {
+    font-size: 0.68rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .dive-heading, .slide-inner-title {
+    font-size: 0.95rem;
+    line-height: 1.35;
+    margin-bottom: 0.45rem;
+  }
+
+  .dive-content, .slide-inner-body {
+    font-size: 0.82rem;
+    line-height: 1.5;
   }
 
   /* Subtle, unobtrusive carousel buttons on touch screens */
   .carousel-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.85rem;
+    width: 26px;
+    height: 26px;
+    font-size: 0.8rem;
     background: rgba(0, 0, 0, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
-    opacity: 0.7;
+    opacity: 0.65;
   }
 
   .carousel-btn.prev {
-    left: 0.4rem;
+    left: 0.35rem;
   }
 
   .carousel-btn.next {
-    right: 0.4rem;
+    right: 0.35rem;
   }
 
   /* Instagram Action Bar on Phone */
   .post-actions-bar {
-    padding: 0.65rem 0.85rem;
+    padding: 0.5rem 0.75rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
 
   .action-group {
-    gap: 0.35rem;
+    gap: 0.3rem;
   }
 
   .action-btn {
-    padding: 0.45rem 0.6rem;
-    font-size: 0.82rem;
+    padding: 0.35rem 0.52rem;
+    font-size: 0.78rem;
     border-radius: 8px;
     touch-action: manipulation;
   }
@@ -2331,14 +2456,22 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 480px) {
+  .app-fluid-content {
+    padding: 0.35rem 0.25rem calc(68px + env(safe-area-inset-bottom, 12px)) 0.25rem;
+  }
   .post-card-wrapper {
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
+    border-radius: 6px;
+    margin: 0 0 0.45rem 0;
   }
   .carousel-container {
-    min-height: 360px;
-    aspect-ratio: 1 / 1.1;
+    min-height: 320px;
+    aspect-ratio: 1 / 1.05;
+  }
+  .author-name {
+    max-width: 140px;
+  }
+  .post-tag {
+    max-width: 95px;
   }
 }
 
