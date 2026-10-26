@@ -798,21 +798,65 @@ function attachCarouselEvents() {
       });
     });
 
-    // Touch gesture support for mobile / tablet + Instagram Double-Tap to Like
+    // Touch gesture support for mobile / tablet + Single-Tap Focus Mode + Instagram Double-Tap to Like
     let lastTapTime = 0;
+    let singleTapTimeout = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    track.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches[0]) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
 
     track.addEventListener('touchend', (e) => {
-      // Check for Instagram Double-Tap to Like
+      const touch = e.changedTouches ? e.changedTouches[0] : null;
+      if (touch) {
+        const deltaX = Math.abs(touch.clientX - touchStartX);
+        const deltaY = Math.abs(touch.clientY - touchStartY);
+        // If swiping or dragging, ignore single-tap focus trigger
+        if (deltaX > 15 || deltaY > 15) {
+          if (singleTapTimeout) {
+            clearTimeout(singleTapTimeout);
+            singleTapTimeout = null;
+          }
+          return;
+        }
+      }
+
       const now = Date.now();
       const interval = now - lastTapTime;
-      if (interval < 320 && interval > 40) {
+
+      // Double-Tap detected! -> Trigger Like
+      if (interval < 300 && interval > 40) {
+        if (singleTapTimeout) {
+          clearTimeout(singleTapTimeout);
+          singleTapTimeout = null;
+        }
         const postId = container.getAttribute('data-post-id');
         if (postId) {
           triggerDoubleTapLike(postId, container);
         }
+        lastTapTime = 0;
+        return;
       }
+
       lastTapTime = now;
-      // Hardware-accelerated CSS scroll-snap glides natively at 120Hz/60Hz without JS fight
+
+      // Single-Tap detected! -> Enter/Exit Focus Reading Mode
+      singleTapTimeout = setTimeout(() => {
+        singleTapTimeout = null;
+        const card = container.closest('.post-card');
+        if (!card) return;
+
+        if (document.body.classList.contains('focus-reading-mode')) {
+          exitFocusReadingMode();
+        } else {
+          enterFocusReadingMode(card);
+        }
+      }, 260);
     }, { passive: true });
   });
 
@@ -2872,6 +2916,68 @@ function closeLikedByModal() {
   if (modal) modal.classList.remove('open');
   if (backdrop) backdrop.classList.remove('open');
 }
+
+/* ==========================================================================
+   Focus Reading Window Mode Handlers
+   - Single-tap card to immerse in full-screen reading
+   - Scrolling or swiping down smoothly exits Focus Mode
+   ========================================================================== */
+function enterFocusReadingMode(card) {
+  if (!card) return;
+  document.querySelectorAll('.post-card').forEach(c => c.classList.remove('focused-folio-card'));
+  card.classList.add('focused-folio-card');
+  document.body.classList.add('focus-reading-mode');
+  try {
+    if (navigator.vibrate) navigator.vibrate(15);
+  } catch (e) {}
+  showToast('✦ Focus Mode: Distraction-free reading. Swipe down to return.');
+}
+
+function exitFocusReadingMode() {
+  if (!document.body.classList.contains('focus-reading-mode')) return;
+  document.body.classList.remove('focus-reading-mode');
+  document.querySelectorAll('.post-card.focused-folio-card').forEach(c => {
+    c.classList.remove('focused-folio-card');
+  });
+}
+
+// Swipe down & scroll down gesture detection to exit Focus Mode
+let focusTouchStartY = 0;
+let focusTouchStartX = 0;
+
+window.addEventListener('touchstart', (e) => {
+  if (!document.body.classList.contains('focus-reading-mode')) return;
+  if (e.touches && e.touches[0]) {
+    focusTouchStartY = e.touches[0].clientY;
+    focusTouchStartX = e.touches[0].clientX;
+  }
+}, { passive: true });
+
+window.addEventListener('touchmove', (e) => {
+  if (!document.body.classList.contains('focus-reading-mode')) return;
+  if (e.touches && e.touches[0]) {
+    const deltaY = e.touches[0].clientY - focusTouchStartY;
+    const deltaX = Math.abs(e.touches[0].clientX - focusTouchStartX);
+    // If swiping downwards (> 45px) and mostly vertical -> smoothly exit Focus Mode!
+    if (deltaY > 45 && deltaY > deltaX * 1.2) {
+      exitFocusReadingMode();
+    }
+  }
+}, { passive: true });
+
+window.addEventListener('wheel', (e) => {
+  if (!document.body.classList.contains('focus-reading-mode')) return;
+  // Scrolling down on mousewheel / trackpad -> exit Focus Mode
+  if (e.deltaY > 25) {
+    exitFocusReadingMode();
+  }
+}, { passive: true });
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.body.classList.contains('focus-reading-mode')) {
+    exitFocusReadingMode();
+  }
+});
 
 /**
  * Capture current slide cleanly with NO header, NO counter badge, and NO overlays
