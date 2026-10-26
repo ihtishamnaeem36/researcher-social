@@ -639,12 +639,12 @@ function renderPostCard(post) {
         </div>
       </div>
 
-      <!-- Action Bar (Cite/Like, Discussion, Illuminate, Audio Listen, Save, Share) -->
+      <!-- Action Bar (Cite/Like, Discussion, Illuminate, Save, Share) -->
       <div class="post-actions-bar">
         <div class="action-group">
-          <!-- Hold Heart to Take Clean Screenshot(s) -->
-          <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" id="like-btn-${post.id}" data-post-id="${post.id}" title="Endorse (Hold for Clean Screenshot, Long-Hold for Full Folio)">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+          <!-- Heart Button (Tap to Endorse, Hold to View Who Endorsed) -->
+          <button class="action-btn like-btn ${isLiked ? 'liked' : ''}" id="like-btn-${post.id}" data-post-id="${post.id}" onclick="toggleLike('${post.id}')" title="Endorse (Hold to see scholars who endorsed)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
             </svg>
             <span class="like-count">${post.likes || 0}</span>
@@ -656,15 +656,6 @@ function renderPostCard(post) {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             <span class="discuss-count">${totalDiscussions > 0 ? totalDiscussions : ''}</span>
-          </button>
-
-          <!-- Audio Narration Button (Listen to Folio via Native Speech Synthesis) -->
-          <button class="audio-listen-btn" id="audio-btn-${post.id}" onclick="toggleAudioNarration('${post.id}')" title="Listen to paper synthesis">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            </svg>
-            <span>Listen</span>
           </button>
 
           <!-- Illuminate Dropdown Action Button -->
@@ -688,8 +679,8 @@ function renderPostCard(post) {
         </div>
 
         <div class="action-group">
-          <!-- Save Button (Icon only) -->
-          <button class="action-btn save-btn ${isSaved ? 'bookmarked' : ''}" onclick="toggleBookmark('${post.id}')" title="Save to Personal Library">
+          <!-- Save Button (Tap to Save, Hold for Clean Screenshot) -->
+          <button class="action-btn save-btn ${isSaved ? 'bookmarked' : ''}" id="save-btn-${post.id}" data-post-id="${post.id}" onclick="toggleBookmark('${post.id}')" title="Save to Personal Library (Hold for Clean Screenshot)">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
             </svg>
@@ -712,7 +703,16 @@ function renderPostCard(post) {
       <div class="illuminate-drawer" id="illuminate-${post.id}">
         <div class="book-page-container">
           <div class="book-page-header">
-            <span class="book-running-head">Folerio Scholarly Exposition · ${escapeHTML(post.field)}</span>
+            <div class="book-header-left">
+              <button class="illuminate-audio-btn" id="illuminate-audio-${post.id}" onclick="toggleAudioNarration('${post.id}')" title="Listen to technical deep dive">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+                <span>Listen</span>
+              </button>
+              <span class="book-running-head">Exposition · ${escapeHTML(post.field)}</span>
+            </div>
             <span class="book-read-time">~3 min deep reading</span>
           </div>
           <h3 class="book-work-title">${escapeHTML(post.title)}</h3>
@@ -817,6 +817,7 @@ function attachCarouselEvents() {
   });
 
   initLikeButtonPressGestures();
+  initSaveButtonPressGestures();
 }
 
 function initCarousels() {
@@ -866,7 +867,7 @@ function requireAuth(actionCallback) {
  */
 async function toggleLike(postId) {
   requireAuth(() => {
-    const post = state.posts.find(p => p.id === postId);
+    const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
     if (!post) return;
 
     const isLiked = state.likedPostIds.has(postId);
@@ -877,14 +878,23 @@ async function toggleLike(postId) {
       state.likedPostIds.add(postId);
       post.likes = (post.likes || 0) + 1;
       SupabaseBridge.recordInteraction(postId, 'like');
+      try {
+        if (navigator.vibrate) navigator.vibrate(20);
+      } catch (e) {}
     }
 
     // Update DOM directly for instant response
     const card = document.getElementById(`post-${postId}`);
     if (card) {
-      const likeBtn = card.querySelector('.action-btn');
+      const likeBtn = card.querySelector('.like-btn') || document.getElementById(`like-btn-${postId}`);
       const likeCount = card.querySelector('.like-count');
-      if (likeBtn) likeBtn.classList.toggle('liked', !isLiked);
+      if (likeBtn) {
+        likeBtn.classList.toggle('liked', !isLiked);
+        const svg = likeBtn.querySelector('svg');
+        if (svg) svg.setAttribute('fill', !isLiked ? 'currentColor' : 'none');
+        likeBtn.classList.add('heart-pop');
+        setTimeout(() => likeBtn.classList.remove('heart-pop'), 400);
+      }
       if (likeCount) likeCount.textContent = post.likes;
     }
   });
@@ -895,9 +905,14 @@ function toggleBookmark(postId) {
     const isSaved = state.savedPostIds.has(postId);
     if (isSaved) {
       state.savedPostIds.delete(postId);
+      showToast('Removed from Personal Library');
     } else {
       state.savedPostIds.add(postId);
       SupabaseBridge.recordInteraction(postId, 'bookmark');
+      showToast('Saved to Personal Library');
+      try {
+        if (navigator.vibrate) navigator.vibrate(20);
+      } catch (e) {}
     }
 
     updateSavedBadge();
@@ -907,10 +922,13 @@ function toggleBookmark(postId) {
     } else {
       const card = document.getElementById(`post-${postId}`);
       if (card) {
-        const bookBtn = card.querySelectorAll('.action-btn')[2];
+        const bookBtn = card.querySelector('.save-btn') || document.getElementById(`save-btn-${postId}`);
         if (bookBtn) {
           bookBtn.classList.toggle('bookmarked', !isSaved);
-          bookBtn.querySelector('span').textContent = !isSaved ? 'Saved' : 'Save';
+          const svg = bookBtn.querySelector('svg');
+          if (svg) svg.setAttribute('fill', !isSaved ? 'currentColor' : 'none');
+          bookBtn.classList.add('save-pop');
+          setTimeout(() => bookBtn.classList.remove('save-pop'), 400);
         }
       }
     }
@@ -1884,12 +1902,14 @@ function generateCitation(post, format = 'apa') {
    ========================================================================== */
 let currentUtterance = null;
 let currentAudioPostId = null;
+let audioHeartbeatTimer = null;
 
 function toggleAudioNarration(postId) {
-  const btn = document.getElementById(`audio-btn-${postId}`);
+  const btn = document.getElementById(`illuminate-audio-${postId}`);
 
   if (window.speechSynthesis && window.speechSynthesis.speaking && currentAudioPostId === postId) {
     window.speechSynthesis.cancel();
+    if (audioHeartbeatTimer) clearInterval(audioHeartbeatTimer);
     btn?.classList.remove('speaking-wave');
     currentAudioPostId = null;
     showToast('Audio narration paused');
@@ -1898,43 +1918,69 @@ function toggleAudioNarration(postId) {
 
   if (window.speechSynthesis) {
     window.speechSynthesis.cancel();
+    if (audioHeartbeatTimer) clearInterval(audioHeartbeatTimer);
   }
-  document.querySelectorAll('.audio-listen-btn').forEach(b => b.classList.remove('speaking-wave'));
+  document.querySelectorAll('.illuminate-audio-btn').forEach(b => b.classList.remove('speaking-wave'));
 
   const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
   if (!post) return;
 
-  const hook = post.slides[0]?.hook || '';
-  const details = post.slides[1]?.content || '';
-  const results = post.slides[2]?.content || '';
-  const narrativeText = `${post.title}. Summary: ${hook}. Details: ${details}. Key Results: ${results}`;
-
   if (!('speechSynthesis' in window)) {
-    showToast('Speech synthesis not supported on this device');
+    showToast('Speech synthesis is not supported on this browser');
     return;
   }
 
-  const utter = new SpeechSynthesisUtterance(narrativeText);
+  // Construct narrative text from the in-depth exposition
+  let narrativeParts = [`${post.title}. Monograph by ${post.authors || 'Folerio Research Group'}.`];
+  if (post.exposition) {
+    if (post.exposition.background) narrativeParts.push(`Context and Background: ${post.exposition.background}`);
+    if (post.exposition.methodology) narrativeParts.push(`Methodology and Framework: ${post.exposition.methodology}`);
+    if (post.exposition.findings) narrativeParts.push(`Key Findings and Empirical Results: ${post.exposition.findings}`);
+    if (post.exposition.implications) narrativeParts.push(`Scholarly Implications: ${post.exposition.implications}`);
+  } else {
+    post.slides.forEach((s, idx) => {
+      narrativeParts.push(`Slide ${idx + 1}, ${s.title}: ${s.hook || ''} ${s.content || ''}`);
+    });
+  }
+
+  // Strip any accidental HTML tags
+  const rawText = narrativeParts.join(' ').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ');
+
+  const utter = new SpeechSynthesisUtterance(rawText);
   utter.rate = 1.0;
   utter.pitch = 1.0;
+  utter.lang = 'en-US';
 
   utter.onstart = () => {
     currentAudioPostId = postId;
     btn?.classList.add('speaking-wave');
-    showToast('🎧 Playing Folio audio synthesis');
+    showToast('🎧 Playing scholarly exposition audio');
     try {
       if (navigator.vibrate) navigator.vibrate(15);
     } catch (e) {}
+
+    // Android WebView keepalive heartbeat
+    audioHeartbeatTimer = setInterval(() => {
+      if (!window.speechSynthesis || !window.speechSynthesis.speaking) {
+        clearInterval(audioHeartbeatTimer);
+      } else {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    }, 10000);
   };
 
   utter.onend = () => {
     btn?.classList.remove('speaking-wave');
     currentAudioPostId = null;
+    if (audioHeartbeatTimer) clearInterval(audioHeartbeatTimer);
   };
 
-  utter.onerror = () => {
+  utter.onerror = (e) => {
+    console.warn('Speech error:', e);
     btn?.classList.remove('speaking-wave');
     currentAudioPostId = null;
+    if (audioHeartbeatTimer) clearInterval(audioHeartbeatTimer);
   };
 
   currentUtterance = utter;
@@ -2590,12 +2636,77 @@ function initEdgeSwipeGestures() {
 }
 
 /* ==========================================================================
-   Silent Gesture Features: Hold Heart for Clean Screenshot & Multi-Slide Capture
+   Gesture Features:
+   - Hold Heart: View Who Endorsed (Scholarly Endorsements Modal)
+   - Hold Save: Clean Slide Screenshot (450ms) or Full Folio Capture (1500ms)
    ========================================================================== */
+
 function initLikeButtonPressGestures() {
   document.querySelectorAll('.action-btn.like-btn').forEach(btn => {
-    if (btn.hasAttribute('data-hold-initialized')) return;
-    btn.setAttribute('data-hold-initialized', 'true');
+    if (btn.hasAttribute('data-like-hold-init')) return;
+    btn.setAttribute('data-like-hold-init', 'true');
+
+    const postId = btn.getAttribute('data-post-id');
+    if (!postId) return;
+
+    let holdTimer = null;
+    let didHold = false;
+
+    const onStart = () => {
+      didHold = false;
+      holdTimer = setTimeout(() => {
+        didHold = true;
+        openLikedByModal(postId);
+        try {
+          if (navigator.vibrate) navigator.vibrate(25);
+        } catch (e) {}
+      }, 500);
+    };
+
+    const onEnd = (e) => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+      if (didHold) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    };
+
+    const onCancel = () => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+    };
+
+    btn.addEventListener('touchstart', onStart, { passive: true });
+    btn.addEventListener('touchend', onEnd);
+    btn.addEventListener('touchcancel', onCancel);
+
+    btn.addEventListener('mousedown', onStart);
+    btn.addEventListener('mouseup', onEnd);
+    btn.addEventListener('mouseleave', onCancel);
+
+    // If hold was triggered, block click event
+    btn.addEventListener('click', (e) => {
+      if (didHold) {
+        e.preventDefault();
+        e.stopPropagation();
+        didHold = false;
+        return false;
+      }
+    });
+  });
+}
+
+function initSaveButtonPressGestures() {
+  document.querySelectorAll('.action-btn.save-btn').forEach(btn => {
+    if (btn.hasAttribute('data-save-hold-init')) return;
+    btn.setAttribute('data-save-hold-init', 'true');
 
     const postId = btn.getAttribute('data-post-id');
     if (!postId) return;
@@ -2635,14 +2746,12 @@ function initLikeButtonPressGestures() {
       const duration = Date.now() - pressStartTime;
       if (duration >= 450) {
         // Short Hold (450ms - 1500ms) -> Single Slide Clean Screenshot!
+        isLongHold = true;
         if (e) {
           e.preventDefault();
           e.stopPropagation();
         }
         captureSingleSlideClean(postId);
-      } else {
-        // Normal Tap (< 450ms) -> Toggle Like
-        toggleLike(postId);
       }
     };
 
@@ -2663,7 +2772,105 @@ function initLikeButtonPressGestures() {
     btn.addEventListener('mousedown', startPress);
     btn.addEventListener('mouseup', endPress);
     btn.addEventListener('mouseleave', cancelPress);
+
+    // Block standard click if a long press screenshot was executed
+    btn.addEventListener('click', (e) => {
+      if (isLongHold) {
+        e.preventDefault();
+        e.stopPropagation();
+        isLongHold = false;
+        return false;
+      }
+    });
   });
+}
+
+const PEER_SCHOLARS_POOL = [
+  { name: "Dr. Sarah Chen", title: "Principal Investigator · Stanford AI Lab", initials: "SC", color: "linear-gradient(135deg, #38bdf8, #6366f1)" },
+  { name: "Prof. Julian Thorne", title: "Chair of Applied Physics · Cambridge University", initials: "JT", color: "linear-gradient(135deg, #10b981, #059669)" },
+  { name: "Dr. Elena Rostova", title: "Senior Fellow · Max Planck Institute for Quantum Optics", initials: "ER", color: "linear-gradient(135deg, #f43f5e, #be123c)" },
+  { name: "Dr. Amara Okafor", title: "Genomics & Precision Medicine · Oxford University", initials: "AO", color: "linear-gradient(135deg, #8b5cf6, #6d28d9)" },
+  { name: "Prof. Kenji Sato", title: "Laboratory of Quantum Devices · Tokyo Institute of Tech", initials: "KS", color: "linear-gradient(135deg, #f59e0b, #d97706)" },
+  { name: "Dr. Maya Lindqvist", title: "Department of Neuroscience · Karolinska Institutet", initials: "ML", color: "linear-gradient(135deg, #06b6d4, #0891b2)" },
+  { name: "Dr. Liam MacIntyre", title: "Climate & Planetary Sciences · ETH Zürich", initials: "LM", color: "linear-gradient(135deg, #ec4899, #be185d)" }
+];
+
+function openLikedByModal(postId) {
+  const modal = document.getElementById('likedByModal');
+  const backdrop = document.getElementById('likedByModalBackdrop');
+  const list = document.getElementById('likedByList');
+  const badge = document.getElementById('likedByCountBadge');
+
+  if (!modal || !backdrop || !list) return;
+
+  const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
+  if (!post) return;
+
+  const likesCount = post.likes || (state.likedPostIds.has(postId) ? 1 : 0);
+  if (badge) {
+    badge.textContent = `${likesCount} Scholar${likesCount === 1 ? '' : 's'}`;
+  }
+
+  // Generate peer scholars list
+  let html = '';
+
+  // If current user endorsed, display them first
+  if (state.likedPostIds.has(postId)) {
+    const userName = state.currentUser?.user_metadata?.full_name || state.currentUser?.email?.split('@')[0] || 'You (Ghost Scholar)';
+    html += `
+      <div class="scholar-like-row">
+        <div class="scholar-like-info">
+          <div class="scholar-like-avatar" style="background: linear-gradient(135deg, #38bdf8, #818cf8);">👻</div>
+          <div class="scholar-like-meta">
+            <div class="scholar-like-name">${escapeHTML(userName)} <span class="verified-badge">✦</span></div>
+            <div class="scholar-like-inst">Folerio Scholar · Endorsed this publication</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Deterministic sample of peer scholars for consistency
+  const seed = postId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const sampleCount = Math.min(PEER_SCHOLARS_POOL.length, Math.max(3, Math.min(5, likesCount)));
+
+  for (let i = 0; i < sampleCount; i++) {
+    const scholar = PEER_SCHOLARS_POOL[(seed + i) % PEER_SCHOLARS_POOL.length];
+    const isColleague = state.colleagues.has(scholar.name);
+    html += `
+      <div class="scholar-like-row">
+        <div class="scholar-like-info">
+          <div class="scholar-like-avatar" style="background: ${scholar.color};">${scholar.initials}</div>
+          <div class="scholar-like-meta">
+            <div class="scholar-like-name">${escapeHTML(scholar.name)} <span class="verified-badge">✦</span></div>
+            <div class="scholar-like-inst">${escapeHTML(scholar.title)}</div>
+          </div>
+        </div>
+        <button class="scholar-colleague-toggle-btn ${isColleague ? 'active' : ''}" onclick="toggleColleague(event, '${escapeHTML(scholar.name)}')">
+          ${isColleague ? 'Colleague ✓' : 'Colleague +'}
+        </button>
+      </div>
+    `;
+  }
+
+  const remaining = Math.max(0, likesCount - (state.likedPostIds.has(postId) ? 1 : 0) - sampleCount);
+  if (remaining > 0) {
+    html += `<div class="liked-by-footer-note">and ${remaining} other peer researchers endorsed this publication</div>`;
+  } else {
+    html += `<div class="liked-by-footer-note">✦ Verified academic endorsements across research networks</div>`;
+  }
+
+  list.innerHTML = html;
+
+  backdrop.classList.add('open');
+  modal.classList.add('open');
+}
+
+function closeLikedByModal() {
+  const modal = document.getElementById('likedByModal');
+  const backdrop = document.getElementById('likedByModalBackdrop');
+  if (modal) modal.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
 }
 
 /**

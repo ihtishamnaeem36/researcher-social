@@ -886,6 +886,26 @@
     </div>
   </div>
 
+  <!-- Endorsed By Scholars Modal (Holding Heart Button) -->
+  <div class="bottom-sheet-backdrop" id="likedByModalBackdrop" onclick="closeLikedByModal()"></div>
+  <div class="liked-by-modal" id="likedByModal" role="dialog" aria-label="Scholarly Endorsements">
+    <div class="liked-by-header">
+      <div class="liked-by-title-group">
+        <h3 class="liked-by-title">Scholarly Endorsements</h3>
+        <span class="liked-by-count-badge" id="likedByCountBadge">0 Scholars</span>
+      </div>
+      <button class="sheet-close-btn" onclick="closeLikedByModal()" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="liked-by-body" id="likedByList">
+      <!-- Populated dynamically by openLikedByModal(postId) -->
+    </div>
+  </div>
+
   <script src="html2canvas.min.js"></script>
   <script src="cache-manager.js"></script>
   <script src="supabase-client.js"></script>
