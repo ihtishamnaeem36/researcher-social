@@ -50,8 +50,14 @@ jobs:
         run: |
           cd android
           if ! ./gradlew assembleDebug --stacktrace > ../gradle-build.log 2>&1; then
-            ERR=$(tail -n 25 ../gradle-build.log | tr '\n' ' ' | sed 's/"//g')
-            echo "::error title=GradleBuildFailure::$ERR"
+            ERR=$(grep -A 8 -B 1 "Execution failed for task" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
+            if [ -z "$ERR" ]; then
+              ERR=$(grep -A 8 "What went wrong" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
+            fi
+            if [ -z "$ERR" ]; then
+              ERR=$(grep -A 5 "Caused by:" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
+            fi
+            echo "::error title=GradleFailure::$ERR"
             tail -n 60 ../gradle-build.log
             exit 1
           fi
