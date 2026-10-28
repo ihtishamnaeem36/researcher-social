@@ -200,6 +200,8 @@ const state = {
   colleagues: new Set(JSON.parse(localStorage.getItem('folerio_colleagues') || '["Abramson, Adler et al."]')),
   activeView: 'feed', // 'feed' | 'explore' | 'profile'
   profileActiveTab: 'folios', // 'folios' | 'saved' | 'colleagues' | 'topics'
+  notifications: [],
+  activeNotifFilter: 'all',
   creator: {
     activeSlideIndex: 0,
     selectedTheme: 'obsidian',
@@ -209,7 +211,13 @@ const state = {
 
 // Initialize Application
 document.addEventListener('DOMContentLoaded', async () => {
+  // Detect if running inside native Android app
+  if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) {
+    document.body.classList.add('is-native-app');
+  }
+
   initTheme();
+  initNotifications();
   SupabaseBridge.init();
 
   // 1. Process Google OAuth redirect callback (#access_token=...)
@@ -765,13 +773,18 @@ function renderPostCard(post) {
         </button>
       </header>
 
-      <!-- Horizontal Multi-Slide Carousel (Clean, no arrow buttons, gesture + dots navigation) -->
+      <!-- Horizontal Multi-Slide Carousel (Desktop arrows for laptop web + gesture swipe for touch) -->
       <div class="carousel-container" data-post-id="${post.id}">
         <!-- Segmented Story Progress Bar (Instagram / TikTok Stories Style) -->
         <div class="slide-story-progress" id="story-progress-${post.id}">
           ${post.slides.map((_, i) => `<div class="story-progress-bar ${i === 0 ? 'active' : ''}"></div>`).join('')}
         </div>
         <div class="carousel-counter-badge" id="counter-${post.id}">1/${post.slides.length}</div>
+        
+        <!-- Desktop / Laptop Navigation Arrows (hidden on touch/Android app via CSS) -->
+        <button class="carousel-btn prev" aria-label="Previous Slide" title="Previous Slide">&#x2039;</button>
+        <button class="carousel-btn next" aria-label="Next Slide" title="Next Slide">&#x203A;</button>
+
         <div class="carousel-track">
           ${slidesHTML}
         </div>
@@ -1127,8 +1140,17 @@ function toggleColleague(event, authorName) {
     const isColleague = state.colleagues.has(authorName);
     if (isColleague) {
       state.colleagues.delete(authorName);
+      showToast(`Disconnected from ${authorName}`);
     } else {
       state.colleagues.add(authorName);
+      addNotification({
+        type: 'colleague_connect',
+        title: 'New Colleague Connected',
+        message: `You connected with ${authorName} as a research colleague. You will receive alerts when they publish or share new folios.`,
+        author: authorName,
+        actionType: 'colleague'
+      });
+      showToast(`Connected with ${authorName} 🤝`);
     }
     localStorage.setItem('folerio_colleagues', JSON.stringify([...state.colleagues]));
 
@@ -3859,4 +3881,284 @@ function initExploreSearch() {
     }
   });
 }
+
+/* ==========================================================================
+   Colleague & Scholar Notifications Center
+   ========================================================================== */
+const DEFAULT_NOTIFICATIONS = [
+  {
+    id: 'notif-1',
+    type: 'colleague_connect',
+    title: 'New Colleague Connection',
+    message: 'Dr. Sarah Lin (Stanford University) connected with you as a fellow researcher in Biotech & Genetics.',
+    time: '12m ago',
+    read: false,
+    author: 'Dr. Sarah Lin (Stanford)',
+    actionType: 'colleague',
+    targetField: 'Biotech & Genetics'
+  },
+  {
+    id: 'notif-2',
+    type: 'colleague_folio',
+    title: 'Colleague Published a Breakthrough Folio',
+    message: 'Prof. Marcus V. (Oxford) published a new Folio in Quantum Computing: "Attention Is All You Need: Eliminating Recurrence in Sequence Modeling".',
+    time: '45m ago',
+    read: false,
+    author: 'Prof. Marcus V.',
+    actionType: 'view_folio',
+    targetPostId: 'seed-transformer'
+  },
+  {
+    id: 'notif-3',
+    type: 'colleague_reply',
+    title: 'Scholarly Discourse Reply',
+    message: 'Elena Rostova replied to your discourse on AlphaFold 3: "The nucleic acid co-folding resolution is where this really outclasses AF2."',
+    time: '2h ago',
+    read: false,
+    author: 'Elena Rostova',
+    actionType: 'view_folio',
+    targetPostId: 'seed-af3'
+  },
+  {
+    id: 'notif-4',
+    type: 'colleague_connect',
+    title: 'Colleague Circle Update',
+    message: 'Abramson, Adler et al. added you to their Colleague Circle in Molecular Modelling.',
+    time: 'Yesterday',
+    read: true,
+    author: 'Abramson, Adler et al.',
+    actionType: 'colleague',
+    targetField: 'Biotech & Genetics'
+  },
+  {
+    id: 'notif-5',
+    type: 'colleague_folio',
+    title: 'Landmark Publication Shared',
+    message: 'Dr. Ming Zhao shared a new landmark folio: "Whole-Body Motion Guided Reference Generation for Humanoid Robots".',
+    time: '2d ago',
+    read: true,
+    author: 'Dr. Ming Zhao',
+    actionType: 'view_folio',
+    targetPostId: 'openalex-w4413346903'
+  }
+];
+
+function initNotifications() {
+  const saved = localStorage.getItem('folerio_notifications');
+  if (saved) {
+    try {
+      state.notifications = JSON.parse(saved);
+    } catch (e) {
+      state.notifications = [...DEFAULT_NOTIFICATIONS];
+    }
+  } else {
+    state.notifications = [...DEFAULT_NOTIFICATIONS];
+    localStorage.setItem('folerio_notifications', JSON.stringify(state.notifications));
+  }
+  updateNotificationsBadge();
+}
+
+function updateNotificationsBadge() {
+  const unreadCount = (state.notifications || []).filter(n => !n.read).length;
+
+  const topBadge = document.getElementById('notificationsBadge');
+  if (topBadge) {
+    topBadge.textContent = unreadCount;
+    topBadge.classList.toggle('hidden', unreadCount === 0);
+  }
+
+  const sidebarBadge = document.getElementById('sidebarNotificationsBadge');
+  if (sidebarBadge) {
+    sidebarBadge.textContent = unreadCount;
+    sidebarBadge.classList.toggle('hidden', unreadCount === 0);
+  }
+
+  // Update modal tab counters if open
+  const countAll = document.getElementById('notifCountAll');
+  if (countAll) countAll.textContent = state.notifications.length;
+
+  const countColleagues = document.getElementById('notifCountColleagues');
+  if (countColleagues) countColleagues.textContent = state.notifications.filter(n => n.type === 'colleague_connect').length;
+
+  const countFolios = document.getElementById('notifCountFolios');
+  if (countFolios) countFolios.textContent = state.notifications.filter(n => n.type === 'colleague_folio').length;
+
+  const countMessages = document.getElementById('notifCountMessages');
+  if (countMessages) countMessages.textContent = state.notifications.filter(n => n.type === 'colleague_reply').length;
+}
+
+function openNotificationsModal() {
+  const modal = document.getElementById('notificationsModal');
+  const backdrop = document.getElementById('notificationsModalBackdrop');
+  if (!modal || !backdrop) return;
+
+  renderNotifications(state.activeNotifFilter || 'all');
+  backdrop.style.display = 'block';
+  modal.classList.add('active');
+}
+
+function closeNotificationsModal() {
+  const modal = document.getElementById('notificationsModal');
+  const backdrop = document.getElementById('notificationsModalBackdrop');
+  if (modal) modal.classList.remove('active');
+  if (backdrop) backdrop.style.display = 'none';
+}
+
+function filterNotifications(filterKey) {
+  state.activeNotifFilter = filterKey;
+  document.querySelectorAll('.notifications-filter-tabs .notif-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.notifFilter === filterKey);
+  });
+  renderNotifications(filterKey);
+}
+
+function markAllNotificationsAsRead() {
+  (state.notifications || []).forEach(n => n.read = true);
+  localStorage.setItem('folerio_notifications', JSON.stringify(state.notifications));
+  updateNotificationsBadge();
+  renderNotifications(state.activeNotifFilter || 'all');
+  showToast('All notifications marked as read ✓');
+}
+
+function renderNotifications(filterKey = 'all') {
+  const listContainer = document.getElementById('notificationsList');
+  if (!listContainer) return;
+
+  let filtered = state.notifications || [];
+  if (filterKey !== 'all') {
+    filtered = filtered.filter(n => n.type === filterKey);
+  }
+
+  updateNotificationsBadge();
+
+  if (filtered.length === 0) {
+    listContainer.innerHTML = `
+      <div class="notif-empty-state">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <p style="font-weight:600; color:var(--text-primary); margin-bottom:0.25rem;">All Caught Up</p>
+        <p style="font-size:0.78rem;">No new colleague notifications in this category.</p>
+      </div>
+    `;
+    return;
+  }
+
+  listContainer.innerHTML = filtered.map(notif => {
+    let iconClass = 'connect';
+    let iconChar = '👥';
+    let actionBtnText = 'View Details';
+
+    if (notif.type === 'colleague_folio') {
+      iconClass = 'folio';
+      iconChar = '📄';
+      actionBtnText = 'Read Folio &rarr;';
+    } else if (notif.type === 'colleague_reply') {
+      iconClass = 'reply';
+      iconChar = '💬';
+      actionBtnText = 'View Discussion &rarr;';
+    } else if (notif.type === 'colleague_connect') {
+      const isConnected = state.colleagues.has(notif.author);
+      actionBtnText = isConnected ? '✓ Colleague' : '+ Connect Back';
+    }
+
+    return `
+      <div class="notification-item ${!notif.read ? 'unread' : ''}" onclick="handleNotificationClick('${escapeHTML(notif.id)}')">
+        <div class="notif-type-icon ${iconClass}">
+          ${iconChar}
+        </div>
+        <div class="notif-content-wrap">
+          <div class="notif-header-line">
+            <span class="notif-title">${escapeHTML(notif.title)}</span>
+            <span class="notif-time">${escapeHTML(notif.time)}</span>
+          </div>
+          <p class="notif-message">${escapeHTML(notif.message)}</p>
+          <button class="notif-action-btn" onclick="event.stopPropagation(); handleNotificationAction('${escapeHTML(notif.id)}')">
+            ${actionBtnText}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function handleNotificationClick(notifId) {
+  const notif = state.notifications.find(n => n.id === notifId);
+  if (!notif) return;
+  notif.read = true;
+  localStorage.setItem('folerio_notifications', JSON.stringify(state.notifications));
+  updateNotificationsBadge();
+  handleNotificationAction(notifId);
+}
+
+function handleNotificationAction(notifId) {
+  const notif = state.notifications.find(n => n.id === notifId);
+  if (!notif) return;
+
+  notif.read = true;
+  localStorage.setItem('folerio_notifications', JSON.stringify(state.notifications));
+  updateNotificationsBadge();
+
+  if (notif.actionType === 'view_folio' && notif.targetPostId) {
+    closeNotificationsModal();
+    switchMainView('feed');
+
+    // Smooth scroll to target post
+    setTimeout(() => {
+      const targetCard = document.getElementById(`post-${notif.targetPostId}`);
+      if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetCard.classList.remove('folio-highlight-pulse');
+        void targetCard.offsetWidth; // trigger reflow
+        targetCard.classList.add('folio-highlight-pulse');
+      } else {
+        showToast('Viewing folio in dispatch feed...');
+      }
+    }, 150);
+  } else if (notif.actionType === 'colleague') {
+    if (notif.author) {
+      const wasConnected = state.colleagues.has(notif.author);
+      if (!wasConnected) {
+        state.colleagues.add(notif.author);
+        localStorage.setItem('folerio_colleagues', JSON.stringify([...state.colleagues]));
+        showToast(`You and ${notif.author} are now connected colleagues! 🤝`);
+      } else {
+        showToast(`Already connected with ${notif.author}`);
+      }
+      renderNotifications(state.activeNotifFilter || 'all');
+    }
+  }
+}
+
+function addNotification({ type, title, message, author, actionType, targetPostId, targetField }) {
+  const newNotif = {
+    id: 'notif-' + Date.now(),
+    type: type || 'colleague_connect',
+    title: title || 'Colleague Activity',
+    message: message || '',
+    time: 'Just now',
+    read: false,
+    author: author || 'Research Colleague',
+    actionType: actionType || (targetPostId ? 'view_folio' : 'colleague'),
+    targetPostId: targetPostId || null,
+    targetField: targetField || null
+  };
+
+  if (!state.notifications) state.notifications = [];
+  state.notifications.unshift(newNotif);
+  if (state.notifications.length > 40) {
+    state.notifications = state.notifications.slice(0, 40);
+  }
+  localStorage.setItem('folerio_notifications', JSON.stringify(state.notifications));
+  updateNotificationsBadge();
+}
+
+window.openNotificationsModal = openNotificationsModal;
+window.closeNotificationsModal = closeNotificationsModal;
+window.filterNotifications = filterNotifications;
+window.markAllNotificationsAsRead = markAllNotificationsAsRead;
+window.handleNotificationClick = handleNotificationClick;
+window.handleNotificationAction = handleNotificationAction;
+window.addNotification = addNotification;
 

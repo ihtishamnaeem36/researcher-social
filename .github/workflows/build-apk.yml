@@ -49,23 +49,28 @@ jobs:
       - name: Build Android APK
         run: |
           cd android
-          if ! ./gradlew assembleDebug --stacktrace > ../gradle-build.log 2>&1; then
-            ERR=$(grep -A 8 -B 1 "Execution failed for task" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
-            if [ -z "$ERR" ]; then
-              ERR=$(grep -A 8 "What went wrong" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
+          if ! ./gradlew assembleRelease --stacktrace > ../gradle-build.log 2>&1; then
+            if ! ./gradlew assembleDebug --stacktrace >> ../gradle-build.log 2>&1; then
+              ERR=$(grep -A 8 -B 1 "Execution failed for task" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
+              if [ -z "$ERR" ]; then
+                ERR=$(grep -A 8 "What went wrong" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
+              fi
+              if [ -z "$ERR" ]; then
+                ERR=$(grep -A 5 "Caused by:" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
+              fi
+              echo "::error title=GradleFailure::$ERR"
+              tail -n 60 ../gradle-build.log
+              exit 1
             fi
-            if [ -z "$ERR" ]; then
-              ERR=$(grep -A 5 "Caused by:" ../gradle-build.log | head -n 15 | tr '\n' ' ' | sed 's/"//g')
-            fi
-            echo "::error title=GradleFailure::$ERR"
-            tail -n 60 ../gradle-build.log
-            exit 1
           fi
 
       - name: Copy & Rename APK
         run: |
           mkdir -p output
-          find android/app/build/outputs/apk -type f -name "*.apk" -exec cp -v {} output/Folerio.apk \;
+          find android/app/build/outputs/apk -type f -name "*release*.apk" -exec cp -v {} output/Folerio.apk \; || true
+          if [ ! -f output/Folerio.apk ]; then
+            find android/app/build/outputs/apk -type f -name "*.apk" -exec cp -v {} output/Folerio.apk \;
+          fi
           if [ ! -f output/Folerio.apk ]; then
             echo "ERROR: Folerio.apk was not generated!"
             find android -name "*.apk"
@@ -85,10 +90,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.3.0
-          name: "Folerio Android v1.3.0 (Universal World Disciplines & Impact-Weighted Discovery)"
+          tag_name: v1.4.0
+          name: "Folerio Android v1.4.0 (Colleague Notifications, Permanent Key In-Place Updates & Touch-Optimized Carousel Controls)"
           body: |
-            ### Folerio Standalone Android APK (v1.3.0)
+            ### Folerio Standalone Android APK (v1.4.0)
+            - **Colleague & Folio Notification Center:** Real-time in-app alerts whenever fellow colleagues connect with you, send messages/replies in discussions, or publish/share breakthrough research folios. Includes direct jump-and-pulse navigation to shared folios and unread badge counters.
+            - **Seamless In-Place APK Updates:** Fixed the *"app not installed / couldn't install"* signature mismatch error by permanently embedding a persistent release certificate keystore (`folerio-release.keystore`). Future APK downloads now smoothly update and replace existing installations without data loss or uninstall prompts.
+            - **Touch-Optimized Carousel Controls (Laptop Web vs. Android App):** On laptop and desktop browsers, sleek glassmorphic navigation buttons (`‹` and `›`) provide seamless mouse clicks. On Android and touch screens, buttons are automatically hidden for an unobstructed, edge-to-edge finger swipe experience.
             - **Universal Disciplines of the World (22 Disciplines):** Expanded to encompass the full spectrum of human inquiry: Natural Sciences, Formal Sciences, Engineering & Tech, Medical & Health Sciences, Social Sciences, and Humanities & Arts.
             - **Impact-Weighted Stream Algorithm:** High-velocity, globally famous fields (AI & ML, Biotech, Quantum, Neuroscience, Clinical Medicine, Materials, Economics, Climate, Robotics, Psychology, Astrophysics) appear with higher frequency (~72%), smoothly interleaved with breakthroughs from Pure Math, Philosophy, Archaeology, Law, Linguistics, and Ecology.
             - **1,730+ Breakthrough Research Folios:** Real peer-reviewed landmarks from OpenAlex with 4-slide visual carousels, 4-section book-style expositions, and scholarly peer reviews.
