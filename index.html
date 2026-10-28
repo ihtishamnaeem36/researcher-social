@@ -132,14 +132,18 @@
         <div class="sidebar-section-header">
           <span>Disciplines</span>
         </div>
-        <div class="sidebar-disciplines-list">
+        <div class="sidebar-disciplines-list" id="sidebarDisciplinesList">
           <button class="discipline-nav-item active" data-topic="all">
             <span class="disc-dot"></span>
-            <span>All Disciplines</span>
+            <span>All Disciplines (Mix)</span>
           </button>
           <button class="discipline-nav-item" data-topic="AI & Machine Learning">
             <span class="disc-dot" style="background:#38bdf8;"></span>
             <span>AI & Machine Learning</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Clinical Medicine & Health">
+            <span class="disc-dot" style="background:#10b981;"></span>
+            <span>Clinical Medicine & Health</span>
           </button>
           <button class="discipline-nav-item" data-topic="Biotech & Genetics">
             <span class="disc-dot" style="background:#34d399;"></span>
@@ -153,21 +157,33 @@
             <span class="disc-dot" style="background:#fbbf24;"></span>
             <span>Quantum Computing</span>
           </button>
+          <button class="discipline-nav-item" data-topic="Economics & Quantitative Finance">
+            <span class="disc-dot" style="background:#f59e0b;"></span>
+            <span>Economics & Finance</span>
+          </button>
           <button class="discipline-nav-item" data-topic="Astrophysics & Space">
             <span class="disc-dot" style="background:#c084fc;"></span>
             <span>Astrophysics & Space</span>
           </button>
-          <button class="discipline-nav-item" data-topic="Materials Science">
-            <span class="disc-dot" style="background:#f59e0b;"></span>
-            <span>Materials Science</span>
-          </button>
           <button class="discipline-nav-item" data-topic="Climate & Earth Systems">
-            <span class="disc-dot" style="background:#10b981;"></span>
+            <span class="disc-dot" style="background:#059669;"></span>
             <span>Climate & Earth Systems</span>
           </button>
           <button class="discipline-nav-item" data-topic="Robotics & Autonomous Systems">
             <span class="disc-dot" style="background:#06b6d4;"></span>
-            <span>Robotics & Autonomous Systems</span>
+            <span>Robotics & Autonomous</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Psychology & Behavioral Science">
+            <span class="disc-dot" style="background:#f97316;"></span>
+            <span>Psychology & Behavior</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Materials Science">
+            <span class="disc-dot" style="background:#eab308;"></span>
+            <span>Materials Science</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Pure & Applied Mathematics">
+            <span class="disc-dot" style="background:#6366f1;"></span>
+            <span>Pure & Applied Math</span>
           </button>
           <button class="discipline-nav-item" data-topic="Computational Chemistry">
             <span class="disc-dot" style="background:#ec4899;"></span>
@@ -178,8 +194,36 @@
             <span>Cryptographic Science</span>
           </button>
           <button class="discipline-nav-item" data-topic="Cognitive Science">
-            <span class="disc-dot" style="background:#f97316;"></span>
+            <span class="disc-dot" style="background:#fb923c;"></span>
             <span>Cognitive Science</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Ecology & Evolutionary Biology">
+            <span class="disc-dot" style="background:#14b8a6;"></span>
+            <span>Ecology & Evolution</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Aerospace & Mechanical Engineering">
+            <span class="disc-dot" style="background:#0284c7;"></span>
+            <span>Aerospace & Mechanical</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Philosophy & Ethics">
+            <span class="disc-dot" style="background:#d97706;"></span>
+            <span>Philosophy & Ethics</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Law & Jurisprudence">
+            <span class="disc-dot" style="background:#64748b;"></span>
+            <span>Law & Jurisprudence</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="History & Archaeology">
+            <span class="disc-dot" style="background:#b45309;"></span>
+            <span>History & Archaeology</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Sociology & Political Science">
+            <span class="disc-dot" style="background:#0369a1;"></span>
+            <span>Sociology & Politics</span>
+          </button>
+          <button class="discipline-nav-item" data-topic="Linguistics & Language Science">
+            <span class="disc-dot" style="background:#e11d48;"></span>
+            <span>Linguistics & Language</span>
           </button>
         </div>
       </div>
@@ -303,16 +347,27 @@
             <div class="topics-wrapper">
               <button class="topic-pill active" data-topic="all">✦ All (Mix)</button>
               <button class="topic-pill" data-topic="AI & Machine Learning">⚡ AI & ML</button>
+              <button class="topic-pill" data-topic="Clinical Medicine & Health">🏥 Medicine</button>
               <button class="topic-pill" data-topic="Biotech & Genetics">🧬 Genetics</button>
               <button class="topic-pill" data-topic="Neuroscience">🧠 Neuroscience</button>
               <button class="topic-pill" data-topic="Quantum Computing">⚛️ Quantum</button>
+              <button class="topic-pill" data-topic="Economics & Quantitative Finance">📈 Economics</button>
               <button class="topic-pill" data-topic="Astrophysics & Space">🔭 Astrophysics</button>
-              <button class="topic-pill" data-topic="Materials Science">🔬 Materials</button>
               <button class="topic-pill" data-topic="Climate & Earth Systems">🌿 Climate</button>
               <button class="topic-pill" data-topic="Robotics & Autonomous Systems">🤖 Robotics</button>
+              <button class="topic-pill" data-topic="Psychology & Behavioral Science">💡 Psychology</button>
+              <button class="topic-pill" data-topic="Materials Science">🔬 Materials</button>
+              <button class="topic-pill" data-topic="Pure & Applied Mathematics">📐 Mathematics</button>
               <button class="topic-pill" data-topic="Computational Chemistry">🧪 Chemistry</button>
               <button class="topic-pill" data-topic="Cryptographic Science">🔐 Cryptography</button>
-              <button class="topic-pill" data-topic="Cognitive Science">💡 Cognitive</button>
+              <button class="topic-pill" data-topic="Cognitive Science">🧩 Cognitive</button>
+              <button class="topic-pill" data-topic="Philosophy & Ethics">🏛️ Philosophy</button>
+              <button class="topic-pill" data-topic="Law & Jurisprudence">⚖️ Law</button>
+              <button class="topic-pill" data-topic="History & Archaeology">🏺 History</button>
+              <button class="topic-pill" data-topic="Aerospace & Mechanical Engineering">🚀 Aerospace</button>
+              <button class="topic-pill" data-topic="Ecology & Evolutionary Biology">🌱 Ecology</button>
+              <button class="topic-pill" data-topic="Sociology & Political Science">🌐 Sociology</button>
+              <button class="topic-pill" data-topic="Linguistics & Language Science">🗣️ Linguistics</button>
             </div>
 
             <div class="filter-toggles">
@@ -363,9 +418,21 @@
           <!-- All Added Fields & Disciplines Matrix -->
           <div class="explore-section-header">
             <div>
-              <h3>All Added Disciplines</h3>
-              <span class="explore-section-sub">Tap to track field or filter immediately</span>
+              <h3>All Global Disciplines</h3>
+              <span class="explore-section-sub">Tap any discipline to track or filter immediate literature</span>
             </div>
+          </div>
+
+          <!-- Faculty Domain Filters -->
+          <div class="explore-faculty-tabs" id="exploreFacultyTabs">
+            <button type="button" class="faculty-tab-btn active" data-faculty="all">All Domains (22)</button>
+            <button type="button" class="faculty-tab-btn" data-faculty="famous">🔥 Famous & High-Impact</button>
+            <button type="button" class="faculty-tab-btn" data-faculty="natural">🌿 Natural & Physical</button>
+            <button type="button" class="faculty-tab-btn" data-faculty="engineering">🤖 Engineering & Tech</button>
+            <button type="button" class="faculty-tab-btn" data-faculty="medical">🏥 Medical & Life</button>
+            <button type="button" class="faculty-tab-btn" data-faculty="social">📈 Social Sciences</button>
+            <button type="button" class="faculty-tab-btn" data-faculty="humanities">🏛️ Humanities & Arts</button>
+            <button type="button" class="faculty-tab-btn" data-faculty="formal">📐 Formal Sciences</button>
           </div>
 
           <div class="disciplines-grid-matrix" id="exploreDisciplinesGrid">
@@ -500,17 +567,36 @@
               <div class="form-group flex-1">
                 <label for="postField">Discipline *</label>
                 <select id="postField" required>
-                  <option value="AI & Machine Learning">AI & Machine Learning</option>
-                  <option value="Biotech & Genetics">Biotech & Genetics</option>
-                  <option value="Neuroscience">Neuroscience</option>
-                  <option value="Quantum Computing">Quantum Computing</option>
-                  <option value="Astrophysics & Space">Astrophysics & Space</option>
-                  <option value="Materials Science">Materials Science</option>
-                  <option value="Climate & Earth Systems">Climate & Earth Systems</option>
-                  <option value="Robotics & Autonomous Systems">Robotics & Autonomous Systems</option>
-                  <option value="Computational Chemistry">Computational Chemistry</option>
-                  <option value="Cryptographic Science">Cryptographic Science</option>
-                  <option value="Cognitive Science">Cognitive Science</option>
+                  <optgroup label="Famous & High-Impact Disciplines">
+                    <option value="AI & Machine Learning">AI & Machine Learning</option>
+                    <option value="Clinical Medicine & Health">Clinical Medicine & Health</option>
+                    <option value="Biotech & Genetics">Biotech & Genetics</option>
+                    <option value="Neuroscience">Neuroscience</option>
+                    <option value="Quantum Computing">Quantum Computing</option>
+                    <option value="Economics & Quantitative Finance">Economics & Quantitative Finance</option>
+                    <option value="Astrophysics & Space">Astrophysics & Space</option>
+                    <option value="Climate & Earth Systems">Climate & Earth Systems</option>
+                    <option value="Robotics & Autonomous Systems">Robotics & Autonomous Systems</option>
+                    <option value="Psychology & Behavioral Science">Psychology & Behavioral Science</option>
+                    <option value="Materials Science">Materials Science</option>
+                  </optgroup>
+                  <optgroup label="Formal & Natural Sciences">
+                    <option value="Pure & Applied Mathematics">Pure & Applied Mathematics</option>
+                    <option value="Computational Chemistry">Computational Chemistry</option>
+                    <option value="Cryptographic Science">Cryptographic Science</option>
+                    <option value="Ecology & Evolutionary Biology">Ecology & Evolutionary Biology</option>
+                  </optgroup>
+                  <optgroup label="Engineering & Computing">
+                    <option value="Aerospace & Mechanical Engineering">Aerospace & Mechanical Engineering</option>
+                    <option value="Cognitive Science">Cognitive Science</option>
+                  </optgroup>
+                  <optgroup label="Social Sciences & Humanities">
+                    <option value="Philosophy & Ethics">Philosophy & Ethics</option>
+                    <option value="Law & Jurisprudence">Law & Jurisprudence</option>
+                    <option value="History & Archaeology">History & Archaeology</option>
+                    <option value="Sociology & Political Science">Sociology & Political Science</option>
+                    <option value="Linguistics & Language Science">Linguistics & Language Science</option>
+                  </optgroup>
                 </select>
               </div>
             </div>

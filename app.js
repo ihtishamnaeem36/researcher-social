@@ -184,6 +184,8 @@ const FOLIO_ARCHETYPES = {
 const state = {
   posts: [],
   primerPosts: [],
+  interleavedPosts: null,
+  exploreFaculty: 'all',
   feedMode: 'frontier', // 'frontier' | 'primer'
   currentTopic: 'all',
   searchQuery: '',
@@ -194,7 +196,7 @@ const state = {
   pageLimit: 15,
   hasInitializedScroll: false,
   currentUser: JSON.parse(localStorage.getItem('folerio_user_profile') || 'null'),
-  trackedTopics: new Set(JSON.parse(localStorage.getItem('folerio_tracked_topics') || '["AI & Machine Learning", "Quantum Computing", "Biotech & Genetics"]')),
+  trackedTopics: new Set(JSON.parse(localStorage.getItem('folerio_tracked_topics') || '["AI & Machine Learning", "Quantum Computing", "Biotech & Genetics", "Clinical Medicine & Health", "Economics & Quantitative Finance"]')),
   colleagues: new Set(JSON.parse(localStorage.getItem('folerio_colleagues') || '["Abramson, Adler et al."]')),
   activeView: 'feed', // 'feed' | 'explore' | 'profile'
   profileActiveTab: 'folios', // 'folios' | 'saved' | 'colleagues' | 'topics'
@@ -359,6 +361,8 @@ async function loadPosts() {
     state.posts = [...SEED_PAPERS];
   }
 
+  state.interleavedPosts = interleaveDisciplinesByImpact(state.posts);
+
   initInfiniteScroll();
   renderFeed();
   renderExploreFeed();
@@ -390,6 +394,7 @@ async function checkForLiveUpdates() {
         if (newFolios.length > 0) {
           console.log(`[Folerio OTA] Auto-merged ${newFolios.length} new research folios in background.`);
           state.posts = [...state.posts, ...newFolios];
+          state.interleavedPosts = interleaveDisciplinesByImpact(state.posts);
           if (typeof FolioCacheDB !== 'undefined') {
             FolioCacheDB.cacheFolios(state.posts, 'frontier').catch(console.warn);
           }
@@ -440,6 +445,102 @@ function updateSavedBadge() {
 }
 
 /**
+ * Interleaves research folios across all disciplines in an impact-weighted ratio.
+ * The most famous / high-velocity disciplines (AI, Biotech, Quantum, Neuroscience,
+ * Medicine, Materials, Economics, Climate, Robotics, Psychology, Astrophysics)
+ * appear more frequently (~72% proportion, alternating 2-3 famous papers per 1 core/humanities paper)
+ * while cycling smoothly through all disciplines so the user experiences rich interdisciplinary discovery.
+ */
+function interleaveDisciplinesByImpact(posts) {
+  if (!posts || posts.length <= 1) return posts;
+
+  const famousSet = new Set([
+    'AI & Machine Learning',
+    'Biotech & Genetics',
+    'Quantum Computing',
+    'Neuroscience',
+    'Materials Science',
+    'Astrophysics & Space',
+    'Clinical Medicine & Health',
+    'Economics & Quantitative Finance',
+    'Psychology & Behavioral Science',
+    'Climate & Earth Systems',
+    'Robotics & Autonomous Systems'
+  ]);
+
+  const famousBins = {};
+  const coreBins = {};
+  const priority = [];
+
+  for (const post of posts) {
+    if (post.id && (post.id.startsWith('seed-') || post.isUserCreated)) {
+      priority.push(post);
+      continue;
+    }
+    const f = post.field || 'General Science';
+    if (famousSet.has(f)) {
+      if (!famousBins[f]) famousBins[f] = [];
+      famousBins[f].push(post);
+    } else {
+      if (!coreBins[f]) coreBins[f] = [];
+      coreBins[f].push(post);
+    }
+  }
+
+  const famousKeys = Object.keys(famousBins);
+  const coreKeys = Object.keys(coreBins);
+
+  let famousIdx = 0;
+  let coreIdx = 0;
+  const result = [...priority];
+
+  let hasMoreFamous = famousKeys.some(k => famousBins[k].length > 0);
+  let hasMoreCore = coreKeys.some(k => coreBins[k].length > 0);
+
+  while (hasMoreFamous || hasMoreCore) {
+    // 2 to 3 famous papers from rotating high-velocity fields
+    const batch = 2 + (result.length % 2);
+    for (let i = 0; i < batch && hasMoreFamous; i++) {
+      let attempts = 0;
+      let found = false;
+      while (attempts < famousKeys.length) {
+        const k = famousKeys[famousIdx % famousKeys.length];
+        famousIdx++;
+        attempts++;
+        if (famousBins[k] && famousBins[k].length > 0) {
+          result.push(famousBins[k].shift());
+          found = true;
+          break;
+        }
+      }
+      if (!found) hasMoreFamous = false;
+    }
+
+    // 1 paper from rotating core / formal / humanities fields
+    if (hasMoreCore) {
+      let attempts = 0;
+      let found = false;
+      while (attempts < coreKeys.length) {
+        const k = coreKeys[coreIdx % coreKeys.length];
+        coreIdx++;
+        attempts++;
+        if (coreBins[k] && coreBins[k].length > 0) {
+          result.push(coreBins[k].shift());
+          found = true;
+          break;
+        }
+      }
+      if (!found) hasMoreCore = false;
+    }
+
+    hasMoreFamous = famousKeys.some(k => famousBins[k] && famousBins[k].length > 0);
+    hasMoreCore = coreKeys.some(k => coreBins[k] && coreBins[k].length > 0);
+  }
+
+  return result;
+}
+
+/**
  * Render Posts Feed with horizontal swipeable carousels & virtual pagination
  */
 function renderFeed() {
@@ -447,7 +548,17 @@ function renderFeed() {
   const emptyState = document.getElementById('emptyFeedState');
   const viewText = document.getElementById('currentViewText');
 
-  const activePool = state.feedMode === 'primer' ? state.primerPosts : state.posts;
+  let activePool;
+  if (state.feedMode === 'primer') {
+    activePool = state.primerPosts;
+  } else if (state.currentTopic === 'all' && !state.showSavedOnly && !state.searchQuery) {
+    if (!state.interleavedPosts || state.interleavedPosts.length !== state.posts.length) {
+      state.interleavedPosts = interleaveDisciplinesByImpact(state.posts);
+    }
+    activePool = state.interleavedPosts;
+  } else {
+    activePool = state.posts;
+  }
 
   let filtered = activePool.filter(p => {
     // Topic filter
@@ -1047,6 +1158,43 @@ function toggleTrackTopic(topicName) {
   });
 }
 
+function syncTopicSelection(topic) {
+  state.currentTopic = topic;
+  state.showSavedOnly = false;
+  state.pageLimit = 15;
+
+  // Sync pills
+  document.querySelectorAll('.topic-pill').forEach(b => {
+    b.classList.toggle('active', b.dataset.topic === topic);
+  });
+  // Auto-scroll topic strip to active pill
+  try {
+    const activePill = document.querySelector(`.topic-pill[data-topic="${CSS.escape(topic)}"]`);
+    if (activePill) {
+      activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  } catch (e) {}
+
+  // Sync sidebar disciplines
+  document.querySelectorAll('.discipline-nav-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.topic === topic);
+  });
+
+  // Sync nav links
+  if (state.feedMode === 'primer') {
+    document.getElementById('navPrimerBtn')?.classList.add('active');
+    document.getElementById('navFeedBtn')?.classList.remove('active');
+  } else {
+    document.getElementById('navFeedBtn')?.classList.add('active');
+    document.getElementById('navPrimerBtn')?.classList.remove('active');
+  }
+  document.getElementById('navSavedBtn')?.classList.remove('active');
+  document.getElementById('filterSavedOnly')?.classList.remove('active');
+
+  renderFeed();
+}
+window.syncTopicSelection = syncTopicSelection;
+
 function filterByField(fieldName) {
   switchMainView('feed');
   syncTopicSelection(fieldName);
@@ -1206,6 +1354,72 @@ function getFolioExposition(post) {
       'A foundational puzzle in cognitive science is how semantic knowledge is organized and retrieved from distributed neural memory networks.',
       'Characterizing human decision-making under uncertainty reveals systematic heuristic shortcuts that diverge from classical rational choice models.',
       'Investigating executive cognitive control demands isolating how the prefrontal cortex gates task-relevant sensory information while suppressing interference.'
+    ],
+    'Clinical Medicine & Health': [
+      'Translating mechanistic physiological discoveries into demonstrable clinical survival outcomes requires navigating profound patient heterogeneity and multimorbid baseline variations.',
+      'A persistent hurdle in translational medicine is mitigating adverse immunogenicity while preserving therapeutic potency across diverse clinical populations.',
+      'Rigorously proving therapeutic efficacy requires isolating true clinical intervention benefits from confounding indications and natural disease trajectory shifts.',
+      'Clinical trial validation demands establishing whether measurable surrogate biomarker endpoints reliably translate into long-term patient-centered survival metrics.'
+    ],
+    'Economics & Quantitative Finance': [
+      'Equilibrium dynamics in complex financial and economic systems are governed by non-linear strategic interactions and endogenous liquidity feedback loops.',
+      'A foundational challenge in empirical economics is identifying true causal mechanisms amidst endogenous policy shifts and pervasive observational confounding.',
+      'Modeling market behavior requires accounting for how informational asymmetry and systemic interconnectedness amplify localized shocks into systemic distress.',
+      'Evaluating macroeconomic policy interventions demands reconciling structural equilibrium models with dynamic, expectations-driven market realignments.'
+    ],
+    'Psychology & Behavioral Science': [
+      'Deconstructing human cognition requires identifying how perceptual architectures, emotional valence, and heuristic biases interact to guide adaptive behavior.',
+      'A central puzzle in behavioral science is reconciling the evolutionary utility of cognitive heuristics with their systematic failure in complex modern probabilistic domains.',
+      'Investigating psychological resilience demands decoupling stable neurodevelopmental traits from transient environmental and sociocultural stressors.',
+      'Measuring internal subjective psychological states requires developing behavioral paradigms that reliably capture latent cognitive variables.'
+    ],
+    'Pure & Applied Mathematics': [
+      'Establishing rigorous mathematical foundations demands uncovering universal geometric and algebraic invariants that remain invariant across coordinate transformations.',
+      'A defining goal of modern pure mathematics is bridging discrete arithmetic structures with continuous harmonic analysis and differential geometry.',
+      'Proving existence and regularity in non-linear partial differential equations requires bounding Sobolev norms against sudden singularity blow-ups.',
+      'Analyzing infinite-dimensional topological spaces demands developing homological machinery capable of classifying complex abstract manifolds.'
+    ],
+    'Ecology & Evolutionary Biology': [
+      'Disentangling the multi-scale drivers of ecosystem resilience requires modeling non-linear trophic cascades and biogeochemical feedback loops under environmental pressure.',
+      'A primary frontier in evolutionary biology is quantifying how epigenetic plasticity and horizontal gene flow interact with classic Mendelian selection regimes.',
+      'Predicting biodiversity shifts under accelerated climate change requires integrating microclimate buffering with species dispersal constraints.',
+      'Reconstructing macroevolutionary divergence rates requires calibrating phylogenetic molecular clocks against patchy fossil deposition records.'
+    ],
+    'Aerospace & Mechanical Engineering': [
+      'Optimizing high-performance mechanical and aerospace structures demands resolving the coupled physics of turbulent boundary layers, structural aeroelasticity, and thermal fatigue.',
+      'A critical challenge in modern hypersonics and propulsion is maintaining stable combustion while managing extreme aerothermal shock-boundary layer interactions.',
+      'Engineering ultra-lightweight structural architectures requires characterizing non-linear microstructural buckling and crack propagation under cyclic stress.',
+      'Dynamic flight control in unmodeled turbulent regimes requires adaptive real-time control algorithms with guaranteed stability envelopes.'
+    ],
+    'Philosophy & Ethics': [
+      'Formulating rigorous ethical and epistemological frameworks requires deconstructing implicit normative assumptions and testing foundational principles against severe edge cases.',
+      'A core question in philosophy of mind is reconciling objective neurocomputational descriptions of cognition with the subjective nature of conscious experience.',
+      'Normative ethics in emerging technological frontiers demands reconciling deontological duties with consequentialist evaluations of existential and systemic risk.',
+      'Epistemic justification requires resolving whether true knowledge requires counterfactual truth-tracking or coherent systemic integration.'
+    ],
+    'Law & Jurisprudence': [
+      'Constitutional and legal jurisprudence must continually reconcile established doctrinal precedents with technological disruption and evolving social norms.',
+      'A central dilemma in legal philosophy is establishing the legitimacy of judicial discretion in statutory interpretation without compromising institutional predictability.',
+      'Governing complex technological systems requires regulatory frameworks capable of mitigating systemic risks without suffocating productive innovation.',
+      'International legal order confronts the structural challenge of coordinating sovereign state actions without centralized coercive enforcement mechanisms.'
+    ],
+    'History & Archaeology': [
+      'Reconstructing past human societies requires synthesizing fragmentary epigraphic records with multi-proxy archaeological and paleogenomic telemetry.',
+      'A central challenge in historical analysis is identifying the socio-ecological tipping points that precipitated the collapse and reorganization of ancient civilizations.',
+      'Interpreting material excavation strata requires isolating anthropogenic deposition signatures from pervasive taphonomic and geological weathering.',
+      'Tracing deep civilizational trade networks demands combining ceramic provenance spectrometry with ancient biomolecular residue analysis.'
+    ],
+    'Sociology & Political Science': [
+      'Understanding institutional cohesion and political polarization requires analyzing how structural network topology and economic inequality shape collective trust.',
+      'A core inquiry in comparative politics is identifying the structural conditions under which democratic institutions endure or succumb to authoritarian consolidation.',
+      'Investigating modern social movements demands analyzing how digital communication networks alter the threshold for grassroots collective action.',
+      'Characterizing civic capacity requires evaluating how institutional design either mitigates or exacerbates systemic intergroup disparities.'
+    ],
+    'Linguistics & Language Science': [
+      'Uncovering the biological and computational architecture of human language demands isolating invariant syntactic operations across typologically diverse linguistic families.',
+      'A foundational puzzle in cognitive linguistics is how human learners generalize abstract recursive grammatical structures from sparse, noisy perceptual input.',
+      'Computational semantics confronts the challenge of modeling how contextual pragmatic inference dynamically alters literal compositionality.',
+      'Tracing language evolution requires reconciling statistical phonetic drift with universal cognitive constraints on speech production and perception.'
     ]
   };
 
@@ -1661,32 +1875,15 @@ function initEventListeners() {
     });
   });
 
-  function syncTopicSelection(topic) {
-    state.currentTopic = topic;
-    state.showSavedOnly = false;
-    state.pageLimit = 15;
-
-    // Sync pills
-    document.querySelectorAll('.topic-pill').forEach(b => {
-      b.classList.toggle('active', b.dataset.topic === topic);
+  // Explore Faculty Filter Tabs
+  document.querySelectorAll('#exploreFacultyTabs .faculty-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#exploreFacultyTabs .faculty-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const faculty = btn.dataset.faculty || 'all';
+      renderExploreDisciplinesGrid(faculty);
     });
-    // Sync sidebar disciplines
-    document.querySelectorAll('.discipline-nav-item').forEach(b => {
-      b.classList.toggle('active', b.dataset.topic === topic);
-    });
-    // Sync nav links
-    if (state.feedMode === 'primer') {
-      document.getElementById('navPrimerBtn')?.classList.add('active');
-      document.getElementById('navFeedBtn')?.classList.remove('active');
-    } else {
-      document.getElementById('navFeedBtn')?.classList.add('active');
-      document.getElementById('navPrimerBtn')?.classList.remove('active');
-    }
-    document.getElementById('navSavedBtn')?.classList.remove('active');
-    document.getElementById('filterSavedOnly')?.classList.remove('active');
-
-    renderFeed();
-  }
+  });
 
   // Feed Mode Switcher (Frontier Research vs Foundations 101)
   function setFeedMode(mode) {
@@ -2150,38 +2347,67 @@ function switchMainView(viewName) {
 /* ==========================================================================
    Explore Disciplines Matrix & Unfollowed Breakthroughs
    ========================================================================== */
-const EXPLORE_DISCIPLINES = [
-  { name: 'AI & Machine Learning', icon: '⚡', color: '#38bdf8' },
-  { name: 'Biotech & Genetics', icon: '🧬', color: '#34d399' },
-  { name: 'Neuroscience', icon: '🧠', color: '#a78bfa' },
-  { name: 'Quantum Computing', icon: '⚛️', color: '#fbbf24' },
-  { name: 'Astrophysics & Space', icon: '🔭', color: '#c084fc' },
-  { name: 'Materials Science', icon: '🔬', color: '#f59e0b' },
-  { name: 'Climate & Earth Systems', icon: '🌿', color: '#10b981' },
-  { name: 'Robotics & Autonomous Systems', icon: '🤖', color: '#06b6d4' },
-  { name: 'Computational Chemistry', icon: '🧪', color: '#ec4899' },
-  { name: 'Cryptographic Science', icon: '🔐', color: '#8b5cf6' },
-  { name: 'Cognitive Science', icon: '💡', color: '#f97316' }
+const MASTER_DISCIPLINES = [
+  // Famous / High-Velocity Tier
+  { name: 'AI & Machine Learning', icon: '⚡', color: '#38bdf8', faculty: 'engineering', tier: 'famous', description: 'Deep learning, neural foundation models, autonomous agents, and inference engines' },
+  { name: 'Biotech & Genetics', icon: '🧬', color: '#34d399', faculty: 'natural', tier: 'famous', description: 'CRISPR gene editing, synthetic biology, mRNA therapeutics, and genomics' },
+  { name: 'Quantum Computing', icon: '⚛️', color: '#fbbf24', faculty: 'formal', tier: 'famous', description: 'Qubit coherence, quantum algorithms, error correction, and entanglement' },
+  { name: 'Neuroscience', icon: '🧠', color: '#a78bfa', faculty: 'natural', tier: 'famous', description: 'Neural circuits, connectomics, neuroplasticity, and brain-computer interfaces' },
+  { name: 'Materials Science', icon: '🔬', color: '#f59e0b', faculty: 'natural', tier: 'famous', description: 'Superconductors, 2D nanomaterials, metamaterials, and energy storage' },
+  { name: 'Astrophysics & Space', icon: '🔭', color: '#c084fc', faculty: 'natural', tier: 'famous', description: 'Cosmology, gravitational waves, exoplanet atmospheres, and stellar evolution' },
+  { name: 'Clinical Medicine & Health', icon: '🩺', color: '#ef4444', faculty: 'medical', tier: 'famous', description: 'Translational oncology, immunology, clinical trials, and epidemiology' },
+  { name: 'Economics & Quantitative Finance', icon: '📈', color: '#10b981', faculty: 'social', tier: 'famous', description: 'Game theory, econometric modeling, market equilibria, and behavioral finance' },
+  { name: 'Psychology & Behavioral Science', icon: '🧩', color: '#f43f5e', faculty: 'social', tier: 'famous', description: 'Cognitive biases, social psychology, decision science, and perception' },
+  { name: 'Climate & Earth Systems', icon: '🌿', color: '#22c55e', faculty: 'natural', tier: 'famous', description: 'Atmospheric dynamics, cryosphere tipping points, and biogeochemical cycles' },
+  { name: 'Robotics & Autonomous Systems', icon: '🤖', color: '#06b6d4', faculty: 'engineering', tier: 'famous', description: 'Kinematics, sensor fusion, spatial perception, and robotic manipulation' },
+
+  // Core, Formal & Humanities Tier
+  { name: 'Pure & Applied Mathematics', icon: '📐', color: '#6366f1', faculty: 'formal', tier: 'core', description: 'Algebraic topology, number theory, differential geometry, and analysis' },
+  { name: 'Computational Chemistry', icon: '🧪', color: '#ec4899', faculty: 'natural', tier: 'core', description: 'Molecular dynamics, density functional theory, and catalyst design' },
+  { name: 'Cryptographic Science', icon: '🔐', color: '#8b5cf6', faculty: 'formal', tier: 'core', description: 'Post-quantum lattice cryptography, zero-knowledge proofs, and secure multiparty compute' },
+  { name: 'Cognitive Science', icon: '💡', color: '#f97316', faculty: 'natural', tier: 'core', description: 'Mental representations, embodied cognition, linguistics, and reasoning' },
+  { name: 'Ecology & Evolutionary Biology', icon: '🌱', color: '#84cc16', faculty: 'natural', tier: 'core', description: 'Phylogenetics, speciation, ecosystem resilience, and population dynamics' },
+  { name: 'Aerospace & Mechanical Engineering', icon: '🚀', color: '#0ea5e9', faculty: 'engineering', tier: 'core', description: 'Hypersonic aerodynamics, propulsion systems, structural dynamics, and turbulence' },
+  { name: 'Philosophy & Ethics', icon: '🏛️', color: '#eab308', faculty: 'humanities', tier: 'core', description: 'Epistemology, normative ethics, philosophy of mind, and existential risk' },
+  { name: 'Law & Jurisprudence', icon: '⚖️', color: '#e11d48', faculty: 'humanities', tier: 'core', description: 'Constitutional theory, digital sovereignty, legal informatics, and governance' },
+  { name: 'History & Archaeology', icon: '🏺', color: '#d97706', faculty: 'humanities', tier: 'core', description: 'Ancient civilizations, excavation strata, paleogenomics, and epigraphy' },
+  { name: 'Sociology & Political Science', icon: '🌐', color: '#14b8a6', faculty: 'social', tier: 'core', description: 'Institutional dynamics, democratization, network sociology, and statecraft' },
+  { name: 'Linguistics & Language Science', icon: '🗣️', color: '#a855f7', faculty: 'humanities', tier: 'core', description: 'Formal syntax, phonology, computational semantics, and typological evolution' }
 ];
 
-function renderExploreDisciplinesGrid() {
+const EXPLORE_DISCIPLINES = MASTER_DISCIPLINES;
+
+function renderExploreDisciplinesGrid(facultyFilter = null) {
   const container = document.getElementById('exploreDisciplinesGrid');
   if (!container) return;
 
-  container.innerHTML = EXPLORE_DISCIPLINES.map(disc => {
+  if (facultyFilter) {
+    state.exploreFaculty = facultyFilter;
+  }
+  const currentFaculty = state.exploreFaculty || 'all';
+
+  let list = MASTER_DISCIPLINES;
+  if (currentFaculty === 'famous') {
+    list = MASTER_DISCIPLINES.filter(d => d.tier === 'famous');
+  } else if (currentFaculty !== 'all') {
+    list = MASTER_DISCIPLINES.filter(d => d.faculty === currentFaculty || (currentFaculty === 'medical' && d.faculty === 'natural' && d.name.includes('Biotech')));
+  }
+
+  container.innerHTML = list.map(disc => {
     const isTracked = state.trackedTopics.has(disc.name);
     const count = state.posts.filter(p => p.field === disc.name).length;
     return `
       <div class="discipline-matrix-card" onclick="filterByField('${escapeHTML(disc.name)}')">
         <div class="matrix-card-top">
           <div class="matrix-icon-chip" style="border-color:${disc.color}40; background:${disc.color}15;">${disc.icon}</div>
-          <div>
+          <div style="flex:1; min-width:0;">
             <div class="matrix-card-title">${escapeHTML(disc.name)}</div>
-            <div class="matrix-card-count">${count} Folios</div>
+            <div class="matrix-card-count">${count} Folios &bull; <span style="text-transform:capitalize; color:var(--text-muted); font-size:0.75rem;">${disc.faculty}</span></div>
           </div>
         </div>
+        ${disc.description ? `<p style="font-size:0.78rem; color:var(--text-secondary); margin:0.4rem 0 0.8rem; line-height:1.4;">${escapeHTML(disc.description)}</p>` : ''}
         <div class="matrix-card-bottom">
-          <span style="font-size:0.75rem; color:var(--text-muted);">Inspect &rarr;</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Inspect Frontier &rarr;</span>
           <button class="track-topic-btn ${isTracked ? 'active' : ''}" onclick="event.stopPropagation(); toggleTrackTopic('${escapeHTML(disc.name)}')">
             ${isTracked ? '✓ Tracking' : '+ Track'}
           </button>
@@ -2200,8 +2426,9 @@ function renderExploreFeed() {
   if (unfollowed.length < 6) {
     unfollowed = state.posts.slice().reverse();
   }
+  const curated = interleaveDisciplinesByImpact(unfollowed);
 
-  container.innerHTML = unfollowed.slice(0, 10).map(post => renderPostCard(post)).join('');
+  container.innerHTML = curated.slice(0, 10).map(post => renderPostCard(post)).join('');
   initCarousels();
 }
 
