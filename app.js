@@ -179,19 +179,6 @@ const FOLIO_ARCHETYPES = {
   }
 };
 
-// Default Demo Scholar Profile
-const DEMO_SCHOLAR_PROFILE = {
-  id: 'scholar-in',
-  name: 'Dr. Ihtisham Naeem',
-  title: 'Lead Research Scholar',
-  institution: 'Quaid-i-Azam University / Computational Lab',
-  department: 'Department of Physics & Complex Systems',
-  field: 'Quantum Information & Biophysics',
-  orcid: '0000-0002-1825-0097',
-  scholarUrl: 'https://scholar.google.com',
-  bio: 'Investigating quantum error-correcting codes, biomolecular diffusion dynamics, and neural computation interfaces.',
-  avatarInitials: 'IN'
-};
 
 // App State
 const state = {
@@ -1417,9 +1404,10 @@ function submitReply(postId, commentId) {
   if (!targetComment) return;
 
   if (!targetComment.replies) targetComment.replies = [];
+  const currentAuthor = state.currentUser ? state.currentUser.name : 'Peer Scholar';
   const newReply = {
     id: 'r-' + Date.now(),
-    author: 'Ihtisham Naeem',
+    author: currentAuthor,
     text: text,
     time: 'Just now'
   };
@@ -1474,9 +1462,10 @@ function submitComment(postId) {
   if (!post) return;
 
   if (!post.comments) post.comments = [];
+  const commentAuthor = state.currentUser ? state.currentUser.name : 'Peer Scholar';
   const newComment = {
     id: 'c-' + Date.now(),
-    author: 'Ihtisham Naeem',
+    author: commentAuthor,
     text: text,
     time: 'Just now',
     replies: []
@@ -2252,12 +2241,7 @@ function renderProfileView() {
             <div style="display:flex; gap:0.5rem; width:100%;">
               <button class="btn btn-primary btn-auth-lg" style="flex:1;" onclick="openAuthModal('signin')">Sign In</button>
               <button class="btn btn-outline btn-auth-lg" style="flex:1;" onclick="openAuthModal('signup')">Create Account</button>
-            </div>
           </div>
-
-          <button class="btn-demo-scholar" onclick="loginAsDemoScholar()">
-            <span class="demo-sparkle">✦</span> 1-Click Demo Scholar: Dr. Ihtisham Naeem
-          </button>
 
           <!-- Scholar Network Benefits -->
           <div class="ghost-benefits-box">
@@ -2594,10 +2578,6 @@ function setupAuthModalListeners() {
     }
   });
 
-  // One-Click Demo Login as Dr. Ihtisham Naeem
-  document.getElementById('authDemoScholarBtn')?.addEventListener('click', () => {
-    signInUser(DEMO_SCHOLAR_PROFILE);
-  });
 
   // Edit Profile Modal
   document.getElementById('closeEditProfileBtn')?.addEventListener('click', closeEditProfileModal);

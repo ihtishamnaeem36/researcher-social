@@ -37,6 +37,29 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         checkAndRequestStoragePermissions();
         setupNativeBridge();
+        handleDeepLink(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleDeepLink(intent);
+    }
+
+    private void handleDeepLink(android.content.Intent intent) {
+        if (intent != null && intent.getData() != null) {
+            final Uri data = intent.getData();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+                    if (webView != null) {
+                        webView.loadUrl(data.toString());
+                    }
+                }
+            });
+        }
     }
 
     private void checkAndRequestStoragePermissions() {
@@ -63,6 +86,15 @@ public class MainActivity extends BridgeActivity {
         try {
             WebView webView = getBridge() != null ? getBridge().getWebView() : null;
             if (webView != null) {
+                // Remove "; wv" to allow Google OAuth inside webview without 403 disallowed_useragent
+                String ua = webView.getSettings().getUserAgentString();
+                if (ua != null && ua.contains("; wv")) {
+                    webView.getSettings().setUserAgentString(ua.replace("; wv", ""));
+                }
+                webView.getSettings().setDomStorageEnabled(true);
+                webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+                webView.getSettings().setSupportMultipleWindows(true);
+
                 webView.addJavascriptInterface(new FolerioNativeBridge(), "FolerioNative");
                 webView.setDownloadListener(new DownloadListener() {
                     @Override
@@ -85,6 +117,21 @@ public class MainActivity extends BridgeActivity {
                 @Override
                 public void run() {
                     saveBase64ToMediaStore(base64Data, filename);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void openExternalUrl(final String url) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url));
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             });
         }

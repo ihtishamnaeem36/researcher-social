@@ -79,10 +79,17 @@ const SupabaseBridge = {
       return;
     }
 
-    // Keep origin + pathname so user lands back cleanly on the active domain
-    const redirectUrl = window.location.origin + window.location.pathname;
+    const redirectUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? `${window.location.origin}${window.location.pathname}`
+      : 'https://ihtishamnaeem36.github.io/researcher-social/';
+
     const authUrl = `${this.config.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
-    window.location.href = authUrl;
+
+    if (window.FolerioNative && typeof window.FolerioNative.openExternalUrl === 'function') {
+      window.FolerioNative.openExternalUrl(authUrl);
+    } else {
+      window.location.href = authUrl;
+    }
   },
 
   /**
