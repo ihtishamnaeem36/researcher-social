@@ -155,6 +155,33 @@ const SupabaseBridge = {
   },
 
   /**
+   * Send Password Recovery / Reset Email
+   */
+  async resetPassword(email) {
+    if (!this.config.isConnected) throw new Error('Supabase is not connected.');
+
+    const redirectUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? `${window.location.origin}${window.location.pathname}`
+      : 'https://ihtishamnaeem36.github.io/researcher-social/';
+
+    const res = await fetch(`${this.config.url}/auth/v1/recover`, {
+      method: 'POST',
+      headers: {
+        'apikey': this.config.anonKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, redirect_to: redirectUrl })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.msg || err.error_description || err.message || 'Failed to send recovery email');
+    }
+
+    return true;
+  },
+
+  /**
    * Fetch authenticated user from Supabase using access token
    */
   async fetchUser(token) {

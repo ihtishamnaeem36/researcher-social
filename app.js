@@ -2140,7 +2140,7 @@ function switchMainView(viewName) {
     renderExploreFeed();
   } else if (viewName === 'profile') {
     if (window.setMobileActiveTab) window.setMobileActiveTab('mobileTabAccount');
-    if (viewText) viewText.textContent = state.currentUser ? 'Scholar Profile' : 'Ghost Scholar (Guest)';
+    if (viewText) viewText.textContent = state.currentUser ? 'Scholar Profile' : 'Guest Scholar Portal';
     renderProfileView();
   }
 
@@ -2213,22 +2213,22 @@ function renderProfileView() {
   if (!container) return;
 
   if (!state.currentUser) {
-    // Guest Mode / Ghost Scholar Profile (Large Circle Avatar, Ghost Name, Auth Options)
+    // Guest Mode / Guest Scholar Profile (Large Circle Avatar, Scholar Identity, Auth Options)
     container.innerHTML = `
       <div class="profile-view-wrap">
         <div class="ghost-profile-card">
           <!-- Large Profile Circle Avatar -->
           <div class="ghost-avatar-circle">
-            <span class="ghost-emoji-face">👻</span>
+            <span class="ghost-emoji-face">🎓</span>
           </div>
 
-          <!-- Name Place: Ghost -->
-          <h1 class="ghost-profile-name">Ghost</h1>
-          <div class="ghost-profile-handle">@ghost.scholar · Stealth Guest Mode</div>
+          <!-- Name Place: Guest Scholar -->
+          <h1 class="ghost-profile-name">Guest Scholar</h1>
+          <div class="ghost-profile-handle">@scholar.guest · Stealth Reading Mode</div>
 
-          <p class="ghost-profile-bio">You are currently reading in anonymous stealth mode. Sign in or create an account to publish Folios, connect with colleagues, and sync your research library across devices.</p>
+          <p class="ghost-profile-bio">You are currently exploring Folerio in anonymous guest mode. Sign in or register to publish research Folios, join academic discourse, and sync your library across devices.</p>
 
-          <div class="ghost-auth-actions" style="display:flex; flex-direction:column; gap:0.5rem;">
+          <div class="ghost-auth-actions" style="display:flex; flex-direction:column; gap:0.5rem; width:100%; max-width:380px;">
             <button type="button" class="btn-google-auth" onclick="SupabaseBridge.signInWithGoogle()" style="width:100%; margin-bottom:0.25rem;">
               <svg class="google-svg-icon" viewBox="0 0 24 24" width="20" height="20">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -2241,6 +2241,7 @@ function renderProfileView() {
             <div style="display:flex; gap:0.5rem; width:100%;">
               <button class="btn btn-primary btn-auth-lg" style="flex:1;" onclick="openAuthModal('signin')">Sign In</button>
               <button class="btn btn-outline btn-auth-lg" style="flex:1;" onclick="openAuthModal('signup')">Create Account</button>
+            </div>
           </div>
 
           <!-- Scholar Network Benefits -->
@@ -2413,9 +2414,9 @@ function updateAuthUI() {
       `;
     }
     if (label) label.textContent = 'Account';
-    if (sidebarAvatarText) sidebarAvatarText.textContent = '👻';
-    if (sidebarProfileName) sidebarProfileName.textContent = 'Ghost';
-    if (sidebarProfileCaption) sidebarProfileCaption.textContent = 'Guest · Tap to Join';
+    if (sidebarAvatarText) sidebarAvatarText.textContent = '🎓';
+    if (sidebarProfileName) sidebarProfileName.textContent = 'Guest Scholar';
+    if (sidebarProfileCaption) sidebarProfileCaption.textContent = 'Tap to Sign In / Join';
   }
 }
 
@@ -2426,12 +2427,19 @@ function openAuthModal(defaultTab = 'signin') {
   const modal = document.getElementById('authModal');
   if (!modal) return;
   modal.style.display = 'flex';
+  const alertBox = document.getElementById('authAlertBox');
+  if (alertBox) {
+    alertBox.style.display = 'none';
+    alertBox.textContent = '';
+  }
   setAuthTab(defaultTab);
 }
 
 function closeAuthModal() {
   const modal = document.getElementById('authModal');
   if (modal) modal.style.display = 'none';
+  const alertBox = document.getElementById('authAlertBox');
+  if (alertBox) alertBox.style.display = 'none';
 }
 
 function setAuthTab(tab) {
@@ -2439,20 +2447,55 @@ function setAuthTab(tab) {
   const signUpBtn = document.getElementById('authTabSignUp');
   const nameGroup = document.getElementById('authNameGroup');
   const heading = document.getElementById('authModalHeading');
+  const subtitle = document.getElementById('authModalSubtitle');
   const submitBtn = document.getElementById('authEmailSubmitBtn');
+  const tabsContainer = document.getElementById('authTabsContainer');
+  const googleBtn = document.getElementById('btnGoogleAuth');
+  const divider = document.getElementById('authDivider');
+  const emailForm = document.getElementById('authEmailForm');
+  const forgotWrap = document.getElementById('authForgotWrap');
+  const forgotLink = document.getElementById('authForgotPwLink');
+  const alertBox = document.getElementById('authAlertBox');
+
+  if (alertBox) alertBox.style.display = 'none';
+
+  if (tab === 'forgot') {
+    if (tabsContainer) tabsContainer.style.display = 'none';
+    if (googleBtn) googleBtn.style.display = 'none';
+    if (divider) divider.style.display = 'none';
+    if (emailForm) emailForm.style.display = 'none';
+    if (forgotWrap) forgotWrap.style.display = 'flex';
+    if (heading) heading.textContent = 'Reset Password';
+    if (subtitle) subtitle.textContent = 'Enter your academic email to receive recovery instructions.';
+    const emailVal = document.getElementById('authEmailInput')?.value || '';
+    const forgotInput = document.getElementById('authForgotEmailInput');
+    if (forgotInput && emailVal) forgotInput.value = emailVal;
+    return;
+  }
+
+  // Normal Form Mode
+  if (tabsContainer) tabsContainer.style.display = 'flex';
+  if (googleBtn) googleBtn.style.display = 'flex';
+  if (divider) divider.style.display = 'flex';
+  if (emailForm) emailForm.style.display = 'flex';
+  if (forgotWrap) forgotWrap.style.display = 'none';
 
   if (tab === 'signup') {
     signInBtn?.classList.remove('active');
     signUpBtn?.classList.add('active');
     if (nameGroup) nameGroup.style.display = 'block';
     if (heading) heading.textContent = 'Create Scholar Account';
+    if (subtitle) subtitle.textContent = 'Join Folerio to publish findings, follow fields, and connect globally.';
     if (submitBtn) submitBtn.textContent = 'Join Folerio Network';
+    if (forgotLink) forgotLink.style.display = 'none';
   } else {
     signInBtn?.classList.add('active');
     signUpBtn?.classList.remove('active');
     if (nameGroup) nameGroup.style.display = 'none';
     if (heading) heading.textContent = 'Sign In to Folerio';
+    if (subtitle) subtitle.textContent = 'Access your frontier research library & academic network.';
     if (submitBtn) submitBtn.textContent = 'Sign In with Email';
+    if (forgotLink) forgotLink.style.display = 'inline';
   }
 }
 
@@ -2482,6 +2525,26 @@ function setupAuthModalListeners() {
   document.getElementById('closeAuthModalBtn')?.addEventListener('click', closeAuthModal);
   document.getElementById('authTabSignIn')?.addEventListener('click', () => setAuthTab('signin'));
   document.getElementById('authTabSignUp')?.addEventListener('click', () => setAuthTab('signup'));
+  document.getElementById('authForgotPwLink')?.addEventListener('click', () => setAuthTab('forgot'));
+  document.getElementById('authBackToLoginBtn')?.addEventListener('click', () => setAuthTab('signin'));
+
+  // Password Visibility Toggle
+  const togglePwBtn = document.getElementById('btnTogglePassword');
+  const pwInput = document.getElementById('authPasswordInput');
+  togglePwBtn?.addEventListener('click', () => {
+    if (!pwInput) return;
+    const isPw = pwInput.type === 'password';
+    pwInput.type = isPw ? 'text' : 'password';
+    togglePwBtn.innerHTML = isPw
+      ? `<svg class="pw-eye-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+           <line x1="1" y1="1" x2="23" y2="23"></line>
+         </svg>`
+      : `<svg class="pw-eye-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+           <circle cx="12" cy="12" r="3"></circle>
+         </svg>`;
+  });
 
   // 1. Official Google OAuth Authentication
   document.getElementById('btnGoogleAuth')?.addEventListener('click', () => {
@@ -2505,7 +2568,14 @@ function setupAuthModalListeners() {
     const fullName = document.getElementById('authFullNameInput')?.value?.trim();
     const submitBtn = document.getElementById('authEmailSubmitBtn');
 
-    if (!email || !password) return;
+    if (!email || !password) {
+      if (alertBox) {
+        alertBox.className = 'auth-alert-box error';
+        alertBox.style.display = 'block';
+        alertBox.textContent = 'Please provide both your academic email and password.';
+      }
+      return;
+    }
 
     if (alertBox) alertBox.style.display = 'none';
     if (submitBtn) {
@@ -2549,32 +2619,44 @@ function setupAuthModalListeners() {
     }
   });
 
-  // Phone OTP Flow (Demo)
-  document.getElementById('sendOtpBtn')?.addEventListener('click', () => {
-    const phone = document.getElementById('authPhoneInput')?.value;
-    if (!phone) {
-      alert('Please enter your mobile phone number.');
+  // 3. Password Reset Recovery Flow
+  document.getElementById('authSendResetBtn')?.addEventListener('click', async () => {
+    const alertBox = document.getElementById('authAlertBox');
+    const email = document.getElementById('authForgotEmailInput')?.value?.trim();
+    const btn = document.getElementById('authSendResetBtn');
+
+    if (!email) {
+      if (alertBox) {
+        alertBox.className = 'auth-alert-box error';
+        alertBox.style.display = 'block';
+        alertBox.textContent = 'Please enter your registered academic email address.';
+      }
       return;
     }
-    document.getElementById('phoneStep1').style.display = 'none';
-    document.getElementById('phoneStep2').style.display = 'block';
-  });
 
-  document.getElementById('verifyOtpBtn')?.addEventListener('click', () => {
-    const otp = document.getElementById('authOtpInput')?.value;
-    if (otp === '123456' || (otp && otp.length === 6)) {
-      const phone = document.getElementById('authPhoneInput')?.value || '+1000';
-      signInUser({
-        id: 'phone-' + Date.now(),
-        name: 'Scholar ' + phone.slice(-4),
-        title: 'Verified Scholar',
-        institution: 'Global Scholar Network',
-        department: 'Advanced Research',
-        field: 'Frontier Sciences',
-        avatarInitials: 'SC'
-      });
-    } else {
-      alert('Verification code is 123456 for demo verification.');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Sending Recovery Link...';
+    }
+
+    try {
+      await SupabaseBridge.resetPassword(email);
+      if (alertBox) {
+        alertBox.className = 'auth-alert-box success';
+        alertBox.style.display = 'block';
+        alertBox.innerHTML = `✉️ Password recovery link dispatched to <strong>${escapeHTML(email)}</strong>. Please check your inbox.`;
+      }
+    } catch (err) {
+      if (alertBox) {
+        alertBox.className = 'auth-alert-box error';
+        alertBox.style.display = 'block';
+        alertBox.textContent = err.message || 'Could not send recovery link. Please verify the email address.';
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Send Recovery Link';
+      }
     }
   });
 
@@ -2973,11 +3055,11 @@ function openLikedByModal(postId) {
 
   // If current user endorsed, display them first
   if (state.likedPostIds.has(postId)) {
-    const userName = state.currentUser?.user_metadata?.full_name || state.currentUser?.email?.split('@')[0] || 'You (Ghost Scholar)';
+    const userName = state.currentUser?.user_metadata?.full_name || state.currentUser?.email?.split('@')[0] || 'You (Guest Scholar)';
     html += `
       <div class="scholar-like-row">
         <div class="scholar-like-info">
-          <div class="scholar-like-avatar" style="background: linear-gradient(135deg, #38bdf8, #818cf8);">👻</div>
+          <div class="scholar-like-avatar" style="background: linear-gradient(135deg, #38bdf8, #818cf8);">🎓</div>
           <div class="scholar-like-meta">
             <div class="scholar-like-name">${escapeHTML(userName)} <span class="verified-badge">✦</span></div>
             <div class="scholar-like-inst">Folerio Scholar · Endorsed this publication</div>
@@ -3358,7 +3440,7 @@ function submitSheetComment() {
   if (!post) return;
 
   if (!post.comments) post.comments = [];
-  const authorName = state.currentUser ? state.currentUser.name : 'Ghost Scholar 👻';
+  const authorName = state.currentUser ? state.currentUser.name : 'Guest Scholar';
   const newComment = {
     id: 'c-' + Date.now(),
     author: authorName,

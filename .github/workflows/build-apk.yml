@@ -85,13 +85,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.2.0
-          name: "Folerio Android v1.2.0 (Google OAuth 2.0 & Real Scholar Auth)"
+          tag_name: v1.2.1
+          name: "Folerio Android v1.2.1 (Sleek Scholar Authentication & Password Recovery)"
           body: |
-            ### Folerio Standalone Android APK (v1.2.0)
+            ### Folerio Standalone Android APK (v1.2.1)
+            - **Sleek Scholar Auth Modal:** Redesigned authentication window with illuminated Folerio crest insignia, smooth segmented tabs, and responsive glassmorphism.
+            - **Show / Hide Password:** Interactive visibility toggle for error-free password entry on mobile virtual keyboards.
+            - **Account Password Recovery:** 1-Click password reset workflow with secure recovery email dispatch.
             - **Google Sign-In & Supabase Auth:** Official OAuth 2.0 authentication with one-tap Google login, verified email accounts, and live scholar profile sync.
-            - **Native OAuth Deep-Linking:** Supports native external browser authentication and deep-link capture for smooth login on Android.
-            - **Clean Scholar Identity:** Removed mock demo profiles in favor of real verified academic credentials.
+            - **Native OAuth Deep-Linking:** Supports native external browser authentication and deep-link capture for seamless return on Android.
+            - **Dignified Scholar Identity:** Refined Guest Scholar Portal and profile metrics without mock placeholders.
             - **11 Scientific Disciplines:** AI & ML, Biotech, Neuroscience, Quantum, Astrophysics, Materials Science, Climate, Robotics, Computational Chemistry, Cryptographic Science, and Cognitive Science.
             - **1,250+ Frontier Research Folios:** Real peer-reviewed literature synthesized into 4-slide visual carousels with deep-dive book-page expositions.
             - **24 Foundational 101 Primers:** Dedicated first-principles masterclasses for curious minds and students.
