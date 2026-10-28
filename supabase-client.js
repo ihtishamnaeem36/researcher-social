@@ -20,6 +20,7 @@ const SupabaseBridge = {
   STORAGE_KEY_KEY: 'folerio_supabase_key',
   STORAGE_KEY_LOCAL_POSTS: 'folerio_local_folios',
   STORAGE_KEY_INTERACTIONS: 'folerio_user_interactions',
+  STORAGE_KEY_SESSION: 'folerio_supabase_session',
 
   config: {
     url: '',
@@ -40,6 +41,276 @@ const SupabaseBridge = {
     }
 
     return this.config;
+  },
+
+  /* ==========================================================================
+     Supabase Authentication (Google OAuth, Email/Password, Profile Sync)
+     ========================================================================== */
+
+  getSession() {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY_SESSION);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  saveSession(session) {
+    if (!session) return;
+    localStorage.setItem(this.STORAGE_KEY_SESSION, JSON.stringify(session));
+  },
+
+  clearSession() {
+    localStorage.removeItem(this.STORAGE_KEY_SESSION);
+  },
+
+  getAccessToken() {
+    const session = this.getSession();
+    return session?.access_token || null;
+  },
+
+  /**
+   * Launch official Google OAuth login
+   */
+  signInWithGoogle() {
+    if (!this.config.isConnected) {
+      alert('Central Supabase cloud is not configured.');
+      return;
+    }
+
+    // Keep origin + pathname so user lands back cleanly on the active domain
+    const redirectUrl = window.location.origin + window.location.pathname;
+    const authUrl = `${this.config.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
+    window.location.href = authUrl;
+  },
+
+  /**
+   * Register with Email & Password
+   */
+  async signUpWithEmail(email, password, fullName = '') {
+    if (!this.config.isConnected) throw new Error('Supabase is not connected.');
+
+    const name = fullName.trim() || email.split('@')[0];
+    const res = await fetch(`${this.config.url}/auth/v1/signup`, {
+      method: 'POST',
+      headers: {
+        'apikey': this.config.anonKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        data: {
+          full_name: name,
+          name: name
+        }
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.msg || data.error_description || data.message || 'Signup failed');
+    }
+
+    if (data.access_token) {
+      this.saveSession(data);
+      const profile = await this.syncProfile(data.user);
+      return this.formatScholarUser(data.user, profile);
+    }
+
+    return { needsConfirmation: true, email: data.email };
+  },
+
+  /**
+   * Sign In with Email & Password
+   */
+  async signInWithEmail(email, password) {
+    if (!this.config.isConnected) throw new Error('Supabase is not connected.');
+
+    const res = await fetch(`${this.config.url}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        'apikey': this.config.anonKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error_description || data.msg || data.message || 'Invalid email or password');
+    }
+
+    this.saveSession(data);
+    const profile = await this.syncProfile(data.user);
+    return this.formatScholarUser(data.user, profile);
+  },
+
+  /**
+   * Fetch authenticated user from Supabase using access token
+   */
+  async fetchUser(token) {
+    if (!token || !this.config.isConnected) return null;
+    try {
+      const res = await fetch(`${this.config.url}/auth/v1/user`, {
+        headers: {
+          'apikey': this.config.anonKey,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.warn('Fetch Supabase user failed', e);
+    }
+    return null;
+  },
+
+  /**
+   * Upsert profile in PostgreSQL public.profiles table
+   */
+  async syncProfile(user) {
+    if (!user || !this.config.isConnected) return null;
+
+    const email = user.email || '';
+    const fullName = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0] || 'Scholar';
+    const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
+    const institution = email.includes('.edu') ? email.split('@')[1].toUpperCase() : 'Global Research Faculty';
+    const username = (email ? email.split('@')[0] : 'scholar') + '_' + user.id.slice(0, 4);
+
+    const profileData = {
+      id: user.id,
+      username: username,
+      full_name: fullName,
+      avatar_url: avatar,
+      institution: institution,
+      field_of_study: 'Frontier Sciences'
+    };
+
+    try {
+      const token = this.getAccessToken() || this.config.anonKey;
+      await fetch(`${this.config.url}/rest/v1/profiles`, {
+        method: 'POST',
+        headers: {
+          'apikey': this.config.anonKey,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(profileData)
+      });
+    } catch (e) {
+      console.warn('Failed to upsert profile to Supabase:', e);
+    }
+
+    return profileData;
+  },
+
+  /**
+   * Format standard Scholar user object for Folerio UI
+   */
+  formatScholarUser(user, profile = {}) {
+    const name = profile.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Scholar';
+    const avatar = profile.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
+    const initials = name.split(' ').map(n => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'SC';
+
+    return {
+      id: user.id,
+      name: name,
+      email: user.email,
+      title: 'Verified Scholar',
+      institution: profile.institution || (user.email?.includes('.edu') ? user.email.split('@')[1] : 'Independent Scholar'),
+      department: 'Faculty of Science',
+      field: profile.field_of_study || 'Frontier Sciences',
+      avatarUrl: avatar,
+      avatarInitials: initials,
+      isVerified: true,
+      rawUser: user
+    };
+  },
+
+  /**
+   * Handles OAuth callback from Google (URL hash fragment `#access_token=...`)
+   */
+  async handleAuthRedirect() {
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('access_token=')) return null;
+
+    try {
+      const params = new URLSearchParams(hash.replace(/^#/, ''));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const expiresIn = params.get('expires_in');
+      const tokenType = params.get('token_type');
+
+      if (accessToken) {
+        const session = {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          expires_in: expiresIn,
+          token_type: tokenType
+        };
+        this.saveSession(session);
+
+        // Clean tokens from browser URL without reloading
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+
+        // Fetch user metadata & upsert profile
+        const user = await this.fetchUser(accessToken);
+        if (user) {
+          session.user = user;
+          this.saveSession(session);
+          const profile = await this.syncProfile(user);
+          return this.formatScholarUser(user, profile);
+        }
+      }
+    } catch (err) {
+      console.error('Error handling Supabase OAuth redirect:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Check currently logged in user session on startup
+   */
+  async getCurrentUser() {
+    const session = this.getSession();
+    if (!session || !session.access_token) return null;
+
+    // Validate with Supabase
+    const user = await this.fetchUser(session.access_token);
+    if (user) {
+      const profile = await this.syncProfile(user);
+      return this.formatScholarUser(user, profile);
+    }
+
+    // If token expired, clear session
+    this.clearSession();
+    return null;
+  },
+
+  /**
+   * Sign out
+   */
+  async signOut() {
+    const token = this.getAccessToken();
+    if (token && this.config.isConnected) {
+      try {
+        await fetch(`${this.config.url}/auth/v1/logout`, {
+          method: 'POST',
+          headers: {
+            'apikey': this.config.anonKey,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch (e) {
+        console.warn('Supabase logout API error:', e);
+      }
+    }
+    this.clearSession();
+    localStorage.removeItem('folerio_user_profile');
   },
 
   /**
@@ -85,7 +356,9 @@ const SupabaseBridge = {
   async createPost(post) {
     if (this.config.isConnected) {
       try {
+        const session = this.getSession();
         const payload = {
+          user_id: session?.user?.id || null,
           paper_title: post.title,
           paper_url: post.doi,
           authors: post.authors,
@@ -96,12 +369,13 @@ const SupabaseBridge = {
           comments: []
         };
 
+        const authToken = this.getAccessToken() || this.config.anonKey;
         const response = await fetch(`${this.config.url}/rest/v1/posts`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'apikey': this.config.anonKey,
-            'Authorization': `Bearer ${this.config.anonKey}`,
+            'Authorization': `Bearer ${authToken}`,
             'Prefer': 'return=representation'
           },
           body: JSON.stringify(payload)

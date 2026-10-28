@@ -222,6 +222,25 @@ const state = {
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   SupabaseBridge.init();
+
+  // 1. Process Google OAuth redirect callback (#access_token=...)
+  try {
+    const oauthUser = await SupabaseBridge.handleAuthRedirect();
+    if (oauthUser) {
+      signInUser(oauthUser);
+      showToast(`Welcome to Folerio, ${oauthUser.name}! 🎓`);
+    } else {
+      // 2. Validate active cloud session
+      const cloudUser = await SupabaseBridge.getCurrentUser();
+      if (cloudUser) {
+        state.currentUser = cloudUser;
+        localStorage.setItem('folerio_user_profile', JSON.stringify(cloudUser));
+      }
+    }
+  } catch (authErr) {
+    console.warn('OAuth redirect check notice:', authErr);
+  }
+
   updateSupabaseStatusIndicator();
   updateAuthUI();
   await loadPosts();
@@ -2220,9 +2239,20 @@ function renderProfileView() {
 
           <p class="ghost-profile-bio">You are currently reading in anonymous stealth mode. Sign in or create an account to publish Folios, connect with colleagues, and sync your research library across devices.</p>
 
-          <div class="ghost-auth-actions">
-            <button class="btn btn-primary btn-auth-lg" onclick="openAuthModal('signin')">Sign In</button>
-            <button class="btn btn-outline btn-auth-lg" onclick="openAuthModal('signup')">Create Account</button>
+          <div class="ghost-auth-actions" style="display:flex; flex-direction:column; gap:0.5rem;">
+            <button type="button" class="btn-google-auth" onclick="SupabaseBridge.signInWithGoogle()" style="width:100%; margin-bottom:0.25rem;">
+              <svg class="google-svg-icon" viewBox="0 0 24 24" width="20" height="20">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+            <div style="display:flex; gap:0.5rem; width:100%;">
+              <button class="btn btn-primary btn-auth-lg" style="flex:1;" onclick="openAuthModal('signin')">Sign In</button>
+              <button class="btn btn-outline btn-auth-lg" style="flex:1;" onclick="openAuthModal('signup')">Create Account</button>
+            </div>
           </div>
 
           <button class="btn-demo-scholar" onclick="loginAsDemoScholar()">
@@ -2303,7 +2333,9 @@ function renderProfileView() {
       <div class="profile-view-wrap">
         <div class="scholar-profile-card">
           <div class="scholar-header-row">
-            <div class="scholar-avatar-circle">${escapeHTML(u.avatarInitials || getInitials(u.name))}</div>
+            <div class="scholar-avatar-circle">
+              ${u.avatarUrl ? `<img src="${escapeHTML(u.avatarUrl)}" alt="${escapeHTML(u.name)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : escapeHTML(u.avatarInitials || getInitials(u.name))}
+            </div>
             <div class="scholar-meta-col">
               <div class="scholar-name-row">
                 <h2 class="scholar-name-h2">${escapeHTML(u.name)}</h2>
@@ -2371,12 +2403,22 @@ function updateAuthUI() {
   if (state.currentUser) {
     const initials = state.currentUser.avatarInitials || getInitials(state.currentUser.name);
     if (avatarWrap) {
-      avatarWrap.innerHTML = `<span style="font-weight:700; font-size:0.75rem; color:var(--accent-cyan);">${initials}</span>`;
+      if (state.currentUser.avatarUrl) {
+        avatarWrap.innerHTML = `<img src="${escapeHTML(state.currentUser.avatarUrl)}" alt="${escapeHTML(state.currentUser.name)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1.5px solid var(--accent-cyan);">`;
+      } else {
+        avatarWrap.innerHTML = `<span style="font-weight:700; font-size:0.75rem; color:var(--accent-cyan);">${initials}</span>`;
+      }
     }
     if (label) label.textContent = state.currentUser.name.split(' ')[0] || 'Profile';
-    if (sidebarAvatarText) sidebarAvatarText.textContent = initials;
+    if (sidebarAvatarText) {
+      if (state.currentUser.avatarUrl) {
+        sidebarAvatarText.innerHTML = `<img src="${escapeHTML(state.currentUser.avatarUrl)}" alt="${escapeHTML(state.currentUser.name)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+      } else {
+        sidebarAvatarText.textContent = initials;
+      }
+    }
     if (sidebarProfileName) sidebarProfileName.textContent = state.currentUser.name;
-    if (sidebarProfileCaption) sidebarProfileCaption.textContent = 'Active Scholar';
+    if (sidebarProfileCaption) sidebarProfileCaption.textContent = state.currentUser.title || 'Verified Scholar';
   } else {
     if (avatarWrap) {
       avatarWrap.innerHTML = `
@@ -2443,11 +2485,13 @@ function signInUser(userProfile) {
   }
 }
 
-function signOutScholar() {
+async function signOutScholar() {
+  await SupabaseBridge.signOut();
   state.currentUser = null;
   localStorage.removeItem('folerio_user_profile');
   updateAuthUI();
   if (state.activeView === 'profile') renderProfileView();
+  showToast('Signed out of Folerio');
 }
 
 function setupAuthModalListeners() {
@@ -2455,42 +2499,73 @@ function setupAuthModalListeners() {
   document.getElementById('authTabSignIn')?.addEventListener('click', () => setAuthTab('signin'));
   document.getElementById('authTabSignUp')?.addEventListener('click', () => setAuthTab('signup'));
 
-  const methodEmailBtn = document.getElementById('methodEmailBtn');
-  const methodPhoneBtn = document.getElementById('methodPhoneBtn');
+  // 1. Official Google OAuth Authentication
+  document.getElementById('btnGoogleAuth')?.addEventListener('click', () => {
+    const alertBox = document.getElementById('authAlertBox');
+    if (alertBox) {
+      alertBox.className = 'auth-alert-box';
+      alertBox.style.display = 'block';
+      alertBox.innerHTML = '⚡ Connecting to Google Authentication...';
+    }
+    SupabaseBridge.signInWithGoogle();
+  });
+
+  // 2. Real Supabase Email + Password Sign In & Sign Up
   const emailForm = document.getElementById('authEmailForm');
-  const phoneForm = document.getElementById('authPhoneForm');
-
-  methodEmailBtn?.addEventListener('click', () => {
-    methodEmailBtn.classList.add('active');
-    methodPhoneBtn?.classList.remove('active');
-    emailForm.style.display = 'block';
-    phoneForm.style.display = 'none';
-  });
-
-  methodPhoneBtn?.addEventListener('click', () => {
-    methodPhoneBtn.classList.add('active');
-    methodEmailBtn?.classList.remove('active');
-    phoneForm.style.display = 'block';
-    emailForm.style.display = 'none';
-  });
-
-  // Email Submit
-  emailForm?.addEventListener('submit', (e) => {
+  emailForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('authEmailInput')?.value || 'scholar@university.edu';
-    const fullName = document.getElementById('authFullNameInput')?.value || email.split('@')[0];
-    signInUser({
-      id: 'scholar-' + Date.now(),
-      name: fullName,
-      title: 'Peer Scholar',
-      institution: email.includes('.edu') ? email.split('@')[1] : 'Independent Scholar',
-      department: 'Faculty of Science',
-      field: 'Interdisciplinary Studies',
-      avatarInitials: getInitials(fullName)
-    });
+    const alertBox = document.getElementById('authAlertBox');
+    const isSignUp = document.getElementById('authTabSignUp')?.classList.contains('active');
+    const email = document.getElementById('authEmailInput')?.value?.trim();
+    const password = document.getElementById('authPasswordInput')?.value;
+    const fullName = document.getElementById('authFullNameInput')?.value?.trim();
+    const submitBtn = document.getElementById('authEmailSubmitBtn');
+
+    if (!email || !password) return;
+
+    if (alertBox) alertBox.style.display = 'none';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = isSignUp ? 'Creating Scholar Account...' : 'Signing In...';
+    }
+
+    try {
+      if (isSignUp) {
+        const res = await SupabaseBridge.signUpWithEmail(email, password, fullName);
+        if (res.needsConfirmation) {
+          if (alertBox) {
+            alertBox.className = 'auth-alert-box success';
+            alertBox.style.display = 'block';
+            alertBox.innerHTML = `✉️ Confirmation email sent to <strong>${escapeHTML(email)}</strong>. Please verify your email or sign in.`;
+          }
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Join Folerio Network';
+          }
+          return;
+        }
+        signInUser(res);
+        showToast(`Welcome to Folerio, ${res.name}! 🎓`);
+      } else {
+        const user = await SupabaseBridge.signInWithEmail(email, password);
+        signInUser(user);
+        showToast(`Welcome back, ${user.name}! ⚡`);
+      }
+    } catch (err) {
+      if (alertBox) {
+        alertBox.className = 'auth-alert-box error';
+        alertBox.style.display = 'block';
+        alertBox.textContent = err.message || 'Authentication failed. Please verify credentials.';
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = isSignUp ? 'Join Folerio Network' : 'Sign In with Email';
+      }
+    }
   });
 
-  // Phone OTP Flow
+  // Phone OTP Flow (Demo)
   document.getElementById('sendOtpBtn')?.addEventListener('click', () => {
     const phone = document.getElementById('authPhoneInput')?.value;
     if (!phone) {
