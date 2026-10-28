@@ -90,24 +90,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.4.1
-          name: "Folerio Android v1.4.1 (Account & Settings Hub, Public Canonical Links & Slide Screenshot Fixes)"
+          tag_name: v1.5.0
+          name: "Folerio Android v1.5.0 (Life Sciences Foundational Curriculum & Universal Disciplines Expansion)"
           body: |
-            ### Folerio Standalone Android APK (v1.4.1)
-            - **Canonical Auth & Email Redirects:** Fixed Gmail confirmation and password recovery links pointing to `localhost:3000`. All Supabase auth and recovery emails now direct to the live public platform (`https://ihtishamnaeem36.github.io/researcher-social/`).
-            - **Folio Save & Share Fixes:** Fixed folio PNG export to dynamically render and save the exact folio and slide currently in view, saving directly into Android Gallery (`Pictures/Folerio`) and generating public canonical URLs.
-            - **Instant Long-Press Save Screenshot:** Holding the bookmark icon for 450ms now reliably triggers the clean screenshot capture with camera flash and haptics, resolving Android WebView contextmenu cancellations.
-            - **Scholar Account & Settings Hub:** Added direct Account & Settings access in the top bar and sidebar navigation with live email status, 1-click password reset link dispatch, profile credential editing, and offline cache capacity controls.
-            - **Colleague & Folio Notification Center:** Real-time in-app alerts whenever fellow colleagues connect, discuss, or share breakthrough research folios.
-            - **Universal Disciplines of the World (22 Disciplines):** Expanded to encompass the full spectrum of human inquiry: Natural Sciences, Formal Sciences, Engineering & Tech, Medical & Health Sciences, Social Sciences, and Humanities & Arts.
-            - **Impact-Weighted Stream Algorithm:** High-velocity, globally famous fields (AI & ML, Biotech, Quantum, Neuroscience, Clinical Medicine, Materials, Economics, Climate, Robotics, Psychology, Astrophysics) appear with higher frequency (~72%), smoothly interleaved with breakthroughs from Pure Math, Philosophy, Archaeology, Law, Linguistics, and Ecology.
-            - **1,730+ Breakthrough Research Folios:** Real peer-reviewed landmarks from OpenAlex with 4-slide visual carousels, 4-section book-style expositions, and scholarly peer reviews.
-            - **38 Foundational Primers:** Dedicated first-principles masterclasses covering every single discipline in the world.
-            - **Explore Global Horizons Matrix:** Multi-faculty filtering tabs (`All Horizons`, `🌟 High-Velocity / Famous`, `🌿 Natural Sciences`, `⚡ Engineering & Tech`, `🩺 Medical & Health`, `🌐 Social Sciences`, `🏛️ Humanities & Arts`, `📐 Formal Sciences`).
-            - **Sleek Scholar Authentication & Password Recovery:** Redesigned authentication window with illuminated Folerio crest insignia, smooth segmented tabs, show/hide password toggle, and 1-click password recovery.
-            - **Google Sign-In & Supabase Auth:** Official OAuth 2.0 authentication with one-tap Google login, verified email accounts, and live cloud profile sync.
-            - **100% Offline-First:** All 1,730 folios and 38 primers are pre-bundled inside the APK. Works completely in Airplane Mode.
-            - **Native Photo Gallery Screenshot:** Long-press or click the Share icon to capture clean card cards directly to your phone's Gallery (`Pictures/Folerio`).
-            - **Over-The-Air (OTA) Live Sync:** In-app background synchronization automatically checks for and merges newly published research folios without needing to reinstall.
+            ### Folerio Standalone Android APK (v1.5.0)
+            - **Complete Life Sciences Foundational Curriculum (Modules 3.1 to 3.7):**
+              - **3.1 Origin of Life & Abiogenesis:** Primordial Soup (Oparin-Haldane), Miller-Urey 1953 spark simulation, deep-sea hydrothermal vents, panspermia, and the catalytic RNA World hypothesis.
+              - **3.1 Evolution of Life:** Darwinian natural selection, Modern Synthesis, transitional paleontology (Archaeopteryx, Tiktaalik), and deep time chronology from Precambrian prokaryotes to Cenozoic hominins.
+              - **3.2 Cell Biology & Bioenergetics:** Cell Theory, organellar networks (ER, Golgi, Lysosomes, Mitochondria, Chloroplasts), chemiosmotic oxidative phosphorylation, photosynthesis, and mitosis vs. meiotic recombination.
+              - **3.3 Molecular Genetics & Heredity:** Antiparallel Watson-Crick DNA double helix, semiconservative replication, central dogma transcription/translation, Mendelian segregation, Punnett probabilities, monogenic pathologies, and targeted CRISPR-Cas9 endonuclease therapy.
+              - **3.4 Microbiology & The Unseen Biosphere:** Bacteria vs. Archaea extremophiles, viral pathogen lifecycles (Influenza, HIV, SARS-CoV-2), gut microbiome metabolic axis, antibiotic resistance mechanisms (MRSA), and industrial fermentation/bioremediation.
+              - **3.5 Human Physiology & Homeostasis:** Integrated 8 organ systems, neural action potentials, cardiovascular-respiratory exchange, endocrine axes, and negative/positive feedback control loops.
+              - **3.6 Ecology & Earth Systems:** Lindeman's 10% trophic efficiency rule, energy pyramids, food webs, keystone species dynamics (Pisaster sea stars, Yellowstone wolves), and biosphere planetary boundaries.
+              - **3.7 Developmental Biology & Stem Cells:** Embryogenesis from zygote to blastocyst and gastrulation, morphogen concentration gradients, totipotent/pluripotent/multipotent hierarchy, and Yamanaka iPSC cellular reprogramming.
+            - **Universal Disciplines Expansion (53 Foundational Primers):** Enriched all 22 disciplines with multiple first-principles foundational masterclasses, including Normative Ethics (Philosophy), Separation of Powers (Law), The Neolithic Revolution (History), Bureaucracy & the State (Sociology), Acoustic Phonetics (Linguistics), Conditioning & Plasticity (Psychology), and Engineering Thermodynamics (Aerospace).
+            - **Authentic Scholarly Peer Critiques:** Each foundational primer includes interactive academic peer discussions, methodological considerations, and verified DOI citations.
+            - **Canonical Auth & Email Redirects:** Supabase confirmation and recovery emails point directly to the public live platform (`https://ihtishamnaeem36.github.io/researcher-social/`).
+            - **Folio Save & Share Fixes:** Dynamic slide PNG capture saves directly to Android Gallery (`Pictures/Folerio`) with persistent public canonical links.
+            - **Scholar Account & Settings Hub:** Direct topbar and sidebar account controls with live email verification status, password reset dispatch, and offline cache controls.
+            - **100% Offline-First:** All 1,730 breakthrough folios and 53 foundational primers are pre-packaged inside the APK. Works completely in Airplane Mode.
             - **Direct Download:** Download `Folerio.apk` below and tap Install/Update.
           files: output/Folerio.apk
