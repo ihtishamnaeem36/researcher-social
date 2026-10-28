@@ -87,6 +87,8 @@ jobs:
           retention-days: 30
 
       - name: Publish Direct Release APK
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
         with:
           tag_name: v1.4.1
           name: "Folerio Android v1.4.1 (Account & Settings Hub, Public Canonical Links & Slide Screenshot Fixes)"
