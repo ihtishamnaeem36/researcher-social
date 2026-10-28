@@ -382,6 +382,20 @@ async function loadPosts() {
     try { window.FolerioNative.requestPermissions(); } catch (e) {}
   }
   checkForLiveUpdates();
+
+  // Global Android / Mobile link click interceptor: ensure external academic sources open in system browser
+  document.addEventListener('click', (e) => {
+    const anchor = e.target.closest('a');
+    if (!anchor || !anchor.href) return;
+    const href = anchor.href;
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      const isExternal = !href.includes(window.location.host);
+      if (isExternal) {
+        e.preventDefault();
+        openExternalPaperUrl(href, e);
+      }
+    }
+  }, { capture: true });
 }
 
 /**
@@ -734,7 +748,15 @@ function renderPostCard(post) {
             </div>
           </div>
           <div class="slide-footer-row">
-            <span>${idx === slideCount - 1 && post.doi ? `<a href="${post.doi}" target="_blank" rel="noreferrer">Open Primary Source (${post.doi.slice(0, 24)}...)</a>` : ''}</span>
+            <span>${idx === slideCount - 1 && post.doi ? `
+              <button class="primary-source-action-btn" onclick="openExternalPaperUrl('${escapeHTML(post.doi)}', event)" title="Read Full Research Paper">
+                <span>Read Full Paper</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+              </button>` : ''}</span>
           </div>
         </div>
       `;
@@ -1541,6 +1563,96 @@ function escapeHTML(str) {
 }
 
 /**
+ * Universal clipboard copy helper with robust mobile/WebView fallbacks
+ */
+async function copyTextToClipboard(text) {
+  if (!text) return false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    // Fall back to execCommand
+  }
+  try {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    textArea.setAttribute('readonly', '');
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return successful;
+  } catch (err) {
+    console.warn('Clipboard copy fallback failed:', err);
+    return false;
+  }
+}
+
+/**
+ * Sanitize academic URLs: upgrade http to https, expand raw DOIs, and ensure mobile accessibility
+ */
+function sanitizePaperUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return '';
+  let url = rawUrl.trim();
+  if (url.startsWith('http://arxiv.org/')) {
+    url = url.replace('http://arxiv.org/', 'https://arxiv.org/');
+  } else if (url.startsWith('http://doi.org/')) {
+    url = url.replace('http://doi.org/', 'https://doi.org/');
+  } else if (url.startsWith('http://')) {
+    url = 'https://' + url.slice(7);
+  }
+
+  if (url.startsWith('10.') || url.startsWith('doi.org/')) {
+    url = url.startsWith('doi.org/') ? 'https://' + url : 'https://doi.org/' + url;
+  } else if (url.startsWith('arxiv.org/')) {
+    url = 'https://' + url;
+  }
+  return url;
+}
+
+/**
+ * Universally open paper primary sources in external phone browser or system window
+ */
+function openExternalPaperUrl(rawUrl, event) {
+  if (event) {
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    if (typeof event.stopPropagation === 'function') event.stopPropagation();
+  }
+  const cleanUrl = sanitizePaperUrl(rawUrl);
+  if (!cleanUrl) {
+    showToast('Primary research paper link unavailable');
+    return;
+  }
+
+  // 1. Android Native Intent Bridge
+  if (typeof window !== 'undefined' && window.FolerioNative && typeof window.FolerioNative.openExternalUrl === 'function') {
+    try {
+      window.FolerioNative.openExternalUrl(cleanUrl);
+      return;
+    } catch (e) {
+      console.warn('Native openExternalUrl failed, falling back', e);
+    }
+  }
+
+  // 2. Capacitor In-App Browser Plugin
+  if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+    try {
+      window.Capacitor.Plugins.Browser.open({ url: cleanUrl });
+      return;
+    } catch (e) {}
+  }
+
+  // 3. System browser window
+  window.open(cleanUrl, '_blank', 'noopener,noreferrer');
+}
+
+/**
  * Recursively count all top-level comments and nested replies
  */
 function countTotalDiscussions(post) {
@@ -1628,16 +1740,29 @@ function toggleReplyBox(postId, commentId) {
 /**
  * Submit a nested peer reply to an existing comment
  */
+/**
+ * Submit a nested peer reply to an existing comment
+ */
 function submitReply(postId, commentId) {
   const input = document.getElementById(`reply-input-${postId}-${commentId}`);
   if (!input || !input.value.trim()) return;
 
   const text = input.value.trim();
-  const post = state.posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
   if (!post || !post.comments) return;
 
   const targetComment = post.comments.find(c => c.id === commentId);
   if (!targetComment) return;
+
+  // If scholar is not logged in: auto-copy draft to device clipboard & prompt login
+  if (!state.currentUser) {
+    copyTextToClipboard(text);
+    sessionStorage.setItem('folerio_pending_comment_draft', text);
+    sessionStorage.setItem('folerio_pending_comment_post_id', postId);
+    openAuthModal('signin');
+    showToast('📋 Reply copied to clipboard! Please sign in to publish.', 'info');
+    return;
+  }
 
   if (!targetComment.replies) targetComment.replies = [];
   const currentAuthor = state.currentUser ? state.currentUser.name : 'Peer Scholar';
@@ -1652,18 +1777,24 @@ function submitReply(postId, commentId) {
   input.value = '';
   toggleReplyBox(postId, commentId);
 
-  // Sync to Supabase & LocalStorage
-  SupabaseBridge.recordInteraction(postId, 'reply', { commentId, reply: newReply });
+  // Sync to Supabase & LocalStorage with network failure safeguard
+  try {
+    SupabaseBridge.recordInteraction(postId, 'reply', { commentId, reply: newReply });
+  } catch (err) {
+    copyTextToClipboard(text);
+    showToast('📡 Network issue: Reply copied to clipboard & saved locally.', 'info');
+  }
 
   // Update UI instantly
   refreshCommentsView(postId);
+  showToast('Reply published to discussion thread');
 }
 
 /**
  * Refresh comments list and total discussion count on the card
  */
 function refreshCommentsView(postId) {
-  const post = state.posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
   if (!post) return;
 
   const drawer = document.getElementById(`comments-${postId}`);
@@ -1694,8 +1825,18 @@ function submitComment(postId) {
   if (!input || !input.value.trim()) return;
 
   const text = input.value.trim();
-  const post = state.posts.find(p => p.id === postId);
+  const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
   if (!post) return;
+
+  // If scholar is not logged in: auto-copy draft to device clipboard & prompt login
+  if (!state.currentUser) {
+    copyTextToClipboard(text);
+    sessionStorage.setItem('folerio_pending_comment_draft', text);
+    sessionStorage.setItem('folerio_pending_comment_post_id', postId);
+    openAuthModal('signin');
+    showToast('📋 Critique copied to clipboard! Please sign in to publish.', 'info');
+    return;
+  }
 
   if (!post.comments) post.comments = [];
   const commentAuthor = state.currentUser ? state.currentUser.name : 'Peer Scholar';
@@ -1710,11 +1851,17 @@ function submitComment(postId) {
 
   input.value = '';
 
-  // Sync to Supabase & LocalStorage
-  SupabaseBridge.recordInteraction(postId, 'comment', newComment);
+  // Sync to Supabase & LocalStorage with network failure safeguard
+  try {
+    SupabaseBridge.recordInteraction(postId, 'comment', newComment);
+  } catch (err) {
+    copyTextToClipboard(text);
+    showToast('📡 Network issue: Critique copied to clipboard & saved locally.', 'info');
+  }
 
   // Update UI instantly
   refreshCommentsView(postId);
+  showToast('Critique added to discussion thread');
 }
 
 
@@ -2821,6 +2968,24 @@ function signInUser(userProfile) {
   updateAuthUI();
   closeAuthModal();
   if (state.activeView === 'profile') renderProfileView();
+
+  // Auto-restore any pending drafted critique if one was drafted before signing in
+  const pendingDraft = sessionStorage.getItem('folerio_pending_comment_draft');
+  const pendingPostId = sessionStorage.getItem('folerio_pending_comment_post_id');
+  if (pendingDraft && pendingPostId) {
+    sessionStorage.removeItem('folerio_pending_comment_draft');
+    sessionStorage.removeItem('folerio_pending_comment_post_id');
+    setTimeout(() => {
+      openCommentsBottomSheet(pendingPostId);
+      const sheetInput = document.getElementById('sheetCommentInput');
+      if (sheetInput) {
+        sheetInput.value = pendingDraft;
+        sheetInput.focus();
+      }
+      showToast('Welcome back! Your critique is ready to publish.');
+    }, 380);
+  }
+
   if (pendingAuthAction) {
     const act = pendingAuthAction;
     pendingAuthAction = null;
@@ -3795,8 +3960,19 @@ function submitSheetComment() {
   const post = state.posts.find(p => p.id === currentSheetPostId) || state.primerPosts.find(p => p.id === currentSheetPostId);
   if (!post) return;
 
+  // If scholar is not logged in: auto-copy draft to device clipboard & prompt login
+  if (!state.currentUser) {
+    copyTextToClipboard(text);
+    sessionStorage.setItem('folerio_pending_comment_draft', text);
+    sessionStorage.setItem('folerio_pending_comment_post_id', currentSheetPostId);
+    closeCommentsBottomSheet();
+    openAuthModal('signin');
+    showToast('📋 Critique copied to clipboard! Please sign in to publish.', 'info');
+    return;
+  }
+
   if (!post.comments) post.comments = [];
-  const authorName = state.currentUser ? state.currentUser.name : 'Guest Scholar';
+  const authorName = state.currentUser ? state.currentUser.name : 'Peer Scholar';
   const newComment = {
     id: 'c-' + Date.now(),
     author: authorName,
@@ -3807,6 +3983,14 @@ function submitSheetComment() {
 
   post.comments.unshift(newComment);
   input.value = '';
+
+  // Sync to Supabase & LocalStorage with network failure safeguard
+  try {
+    SupabaseBridge.recordInteraction(currentSheetPostId, 'comment', newComment);
+  } catch (err) {
+    copyTextToClipboard(text);
+    showToast('📡 Network issue: Critique copied to clipboard & saved locally.', 'info');
+  }
 
   // Update sheet view
   openCommentsBottomSheet(currentSheetPostId);

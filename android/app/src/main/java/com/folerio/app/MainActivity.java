@@ -93,7 +93,32 @@ public class MainActivity extends BridgeActivity {
                 }
                 webView.getSettings().setDomStorageEnabled(true);
                 webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
-                webView.getSettings().setSupportMultipleWindows(true);
+                webView.getSettings().setSupportMultipleWindows(false);
+
+                webView.setWebViewClient(new android.webkit.WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
+                        if (request != null && request.getUrl() != null) {
+                            String url = request.getUrl().toString();
+                            if (url.startsWith("http://") || url.startsWith("https://")) {
+                                String host = request.getUrl().getHost();
+                                if (host != null && !host.contains("localhost") && !host.contains("127.0.0.1") && !url.contains("capacitor://")) {
+                                    try {
+                                        String cleanUrl = url;
+                                        if (cleanUrl.startsWith("http://arxiv.org/")) cleanUrl = cleanUrl.replace("http://arxiv.org/", "https://arxiv.org/");
+                                        else if (cleanUrl.startsWith("http://doi.org/")) cleanUrl = cleanUrl.replace("http://doi.org/", "https://doi.org/");
+                                        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(cleanUrl));
+                                        startActivity(intent);
+                                        return true;
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                        }
+                        return false;
+                    }
+                });
 
                 webView.addJavascriptInterface(new FolerioNativeBridge(), "FolerioNative");
                 webView.setDownloadListener(new DownloadListener() {
@@ -127,7 +152,15 @@ public class MainActivity extends BridgeActivity {
                 @Override
                 public void run() {
                     try {
-                        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url));
+                        String cleanUrl = url;
+                        if (cleanUrl != null) {
+                            if (cleanUrl.startsWith("http://arxiv.org/")) {
+                                cleanUrl = cleanUrl.replace("http://arxiv.org/", "https://arxiv.org/");
+                            } else if (cleanUrl.startsWith("http://doi.org/")) {
+                                cleanUrl = cleanUrl.replace("http://doi.org/", "https://doi.org/");
+                            }
+                        }
+                        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(cleanUrl));
                         startActivity(intent);
                     } catch (Exception e) {
                         e.printStackTrace();

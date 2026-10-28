@@ -1126,6 +1126,42 @@ a:hover {
   animation: pulseX 2s infinite ease-in-out;
 }
 
+.primary-source-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: var(--accent-cyan);
+  padding: 0.42rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.primary-source-action-btn:hover {
+  background: rgba(56, 189, 248, 0.24);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+  transform: translateY(-1px);
+}
+
+.primary-source-action-btn:active {
+  transform: translateY(0);
+}
+
+.primary-source-action-btn svg {
+  transition: transform var(--transition-fast);
+}
+
+.primary-source-action-btn:hover svg {
+  transform: translate(1px, -1px);
+}
+
 @keyframes pulseX {
   0%, 100% { transform: translateX(0); }
   50% { transform: translateX(4px); }
@@ -2402,11 +2438,193 @@ input:focus, select:focus, textarea:focus {
     padding-left: 0.65rem;
   }
 
-  /* Modals on Phone */
+  /* Edge-to-Edge Responsive Modals on Mobile & Android */
+  .modal-overlay {
+    padding: 0.5rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
   .modal-card {
-    margin: 1rem;
-    max-height: 90vh;
-    padding: 1.25rem;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: 88vh !important;
+    border-radius: 16px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Login & Auth Window on Phone (Prevents overflow) */
+  .auth-modal-card {
+    max-width: calc(100vw - 20px) !important;
+    width: 100% !important;
+    border-radius: 18px !important;
+    overflow-y: auto !important;
+  }
+
+  .auth-modal-header {
+    padding: 1rem 1rem 0.65rem !important;
+  }
+
+  .auth-modal-title-row {
+    gap: 0.65rem !important;
+  }
+
+  .auth-modal-title-row h2 {
+    font-size: 1.05rem !important;
+    letter-spacing: -0.01em !important;
+    margin: 0 !important;
+  }
+
+  .auth-modal-title-row p.modal-subtitle {
+    font-size: 0.74rem !important;
+    line-height: 1.3 !important;
+    margin-top: 0.15rem !important;
+  }
+
+  .auth-modal-emblem {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .auth-modal-emblem svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .auth-modal-body {
+    padding: 0.9rem 1rem 1.25rem !important;
+    gap: 0.75rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .auth-tab-btn {
+    padding: 0.42rem 0 !important;
+    font-size: 0.78rem !important;
+  }
+
+  .btn-google-auth {
+    padding: 0.65rem 0.85rem !important;
+    font-size: 0.84rem !important;
+    border-radius: 10px !important;
+  }
+
+  .btn-google-auth svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .auth-form {
+    gap: 0.75rem !important;
+  }
+
+  .auth-form input {
+    padding: 0.6rem 0.75rem !important;
+    font-size: 0.82rem !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .auth-form label {
+    font-size: 0.76rem !important;
+  }
+
+  .auth-form button[type="submit"] {
+    padding: 0.68rem 1rem !important;
+    font-size: 0.85rem !important;
+    border-radius: 10px !important;
+  }
+
+  /* Share Window on Phone (Edge-to-Edge Clean Containment) */
+  #shareModal .modal-card {
+    max-width: calc(100vw - 20px) !important;
+    width: 100% !important;
+    border-radius: 18px !important;
+  }
+
+  #shareModal .modal-header {
+    padding: 1rem 1rem 0.65rem !important;
+  }
+
+  #shareModal .modal-header h2 {
+    font-size: 1.05rem !important;
+    margin: 0 !important;
+  }
+
+  #shareModal .modal-subtitle {
+    font-size: 0.74rem !important;
+    margin-top: 0.15rem !important;
+  }
+
+  .share-body {
+    padding: 0.85rem 1rem 1.15rem !important;
+    gap: 0.75rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .share-field label {
+    font-size: 0.76rem !important;
+    margin-bottom: 0.3rem !important;
+  }
+
+  .copy-input-row {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    gap: 0.4rem !important;
+  }
+
+  .copy-input-row input {
+    min-width: 0 !important;
+    padding: 0.5rem 0.65rem !important;
+    font-size: 0.78rem !important;
+    border-radius: 8px !important;
+  }
+
+  .copy-input-row .btn {
+    padding: 0.5rem 0.85rem !important;
+    font-size: 0.78rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .share-actions-grid {
+    gap: 0.45rem !important;
+  }
+
+  .share-option-btn {
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.8rem !important;
+    border-radius: 8px !important;
+  }
+
+  .citation-tabs-strip {
+    gap: 0.25rem !important;
+    margin-bottom: 0.45rem !important;
+    flex-wrap: wrap !important;
+  }
+
+  .citation-tab {
+    padding: 0.3rem 0.4rem !important;
+    font-size: 0.7rem !important;
+    border-radius: 6px !important;
+  }
+
+  .citation-preview-card {
+    padding: 0.6rem 0.75rem !important;
+    font-size: 0.72rem !important;
+    max-height: 80px !important;
+    border-radius: 8px !important;
+    line-height: 1.4 !important;
+    word-break: break-word !important;
+  }
+
+  #copyCitationBtn {
+    padding: 0.55rem 0.85rem !important;
+    font-size: 0.78rem !important;
+    border-radius: 8px !important;
   }
 
   /* Instagram Mobile Bottom Navigation Bar */

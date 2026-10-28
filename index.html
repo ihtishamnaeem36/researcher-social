@@ -26,28 +26,25 @@
           <div class="logo-mark">
             <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="folerioLogoGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#38bdf8"/>
-                  <stop offset="50%" stop-color="#818cf8"/>
-                  <stop offset="100%" stop-color="#c084fc"/>
+                <linearGradient id="folerioCrestGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#38BDF8"/>
+                  <stop offset="50%" stop-color="#818CF8"/>
+                  <stop offset="100%" stop-color="#C084FC"/>
                 </linearGradient>
-                <linearGradient id="folerioPaperBg" x1="6" y1="4" x2="26" y2="28" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="rgba(56, 189, 248, 0.22)"/>
-                  <stop offset="100%" stop-color="rgba(99, 102, 241, 0.12)"/>
+                <linearGradient id="folerioPlateFill" x1="6" y1="6" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="rgba(56, 189, 248, 0.32)"/>
+                  <stop offset="100%" stop-color="rgba(129, 140, 248, 0.16)"/>
                 </linearGradient>
               </defs>
-              <!-- Layer 1: Background Research Folio (Depth & Peer Layers) -->
-              <path d="M6 8C6 6.89543 6.89543 6 8 6H17L21 10V22C21 23.1046 20.1046 24 19 24H8C6.89543 24 6 23.1046 6 22V8Z" fill="rgba(129, 140, 248, 0.14)" stroke="url(#folerioLogoGrad)" stroke-width="1.3" stroke-opacity="0.5" stroke-linejoin="round"/>
-              <!-- Layer 2: Foreground Elevated Folio with Precision Corner Fold -->
-              <path d="M11 5C11 3.89543 11.8954 3 13 3H22L26 7V25C26 26.1046 25.1046 27 24 27H13C11.8954 27 11 26.1046 11 25V5Z" fill="url(#folerioPaperBg)" stroke="url(#folerioLogoGrad)" stroke-width="1.8" stroke-linejoin="round"/>
-              <!-- Turned Precision Corner Fold -->
-              <path d="M22 3V6.5C22 6.77614 22.2239 7 22.5 7H26" stroke="url(#folerioLogoGrad)" stroke-width="1.8" stroke-linejoin="round" fill="rgba(56, 189, 248, 0.45)"/>
-              <!-- Prism of Discovery & Central Luminous Spark -->
-              <path d="M18.5 10.5L21.2 15L18.5 19.5L15.8 15Z" fill="url(#folerioLogoGrad)" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/>
-              <circle cx="18.5" cy="15" r="1.5" fill="#ffffff"/>
-              <!-- Architectural Scientific Coordinates -->
-              <line x1="14.5" y1="22.5" x2="22.5" y2="22.5" stroke="rgba(255, 255, 255, 0.5)" stroke-width="1.2" stroke-linecap="round"/>
-              <line x1="14.5" y1="24.5" x2="19.5" y2="24.5" stroke="rgba(255, 255, 255, 0.35)" stroke-width="1" stroke-linecap="round"/>
+              <!-- Base Foundation Layer -->
+              <path d="M16 23.5L6 18.2L16 13L26 18.2L16 23.5Z" fill="rgba(129, 140, 248, 0.18)" stroke="url(#folerioCrestGrad)" stroke-width="1.4" stroke-linejoin="round"/>
+              <!-- Intermediate Synthesizing Layer -->
+              <path d="M16 18.5L6 13.2L16 8L26 13.2L16 18.5Z" fill="url(#folerioPlateFill)" stroke="url(#folerioCrestGrad)" stroke-width="1.6" stroke-linejoin="round"/>
+              <!-- Apex Discovery Crown with Central Luminous Prismatic Core -->
+              <path d="M16 13.5L7 8.5L16 3.5L25 8.5L16 13.5Z" fill="rgba(56, 189, 248, 0.48)" stroke="url(#folerioCrestGrad)" stroke-width="1.8" stroke-linejoin="round"/>
+              <!-- Radiant Focal Node of Scientific Discovery -->
+              <circle cx="16" cy="8.5" r="2" fill="#FFFFFF"/>
+              <circle cx="16" cy="8.5" r="3.5" stroke="rgba(255, 255, 255, 0.6)" stroke-width="0.8"/>
             </svg>
           </div>
           <div class="brand-text">
@@ -288,11 +285,11 @@
 
           <!-- Mobile-Only Brand Header (Instagram Style) -->
           <div class="mobile-brand-title">
-            <svg class="mobile-brand-logo" width="22" height="22" viewBox="0 0 48 48" fill="none">
-              <rect x="8" y="10" width="26" height="32" rx="4" fill="rgba(56, 189, 248, 0.15)" stroke="var(--accent-cyan)" stroke-width="2"/>
-              <rect x="14" y="6" width="26" height="32" rx="4" fill="rgba(99, 102, 241, 0.18)" stroke="var(--accent-blue)" stroke-width="2"/>
-              <polygon points="27,18 31,22 27,26 23,22" fill="var(--accent-amber)" />
-              <circle cx="27" cy="22" r="1.5" fill="#ffffff" />
+            <svg class="mobile-brand-logo" width="22" height="22" viewBox="0 0 32 32" fill="none">
+              <path d="M16 23.5L6 18.2L16 13L26 18.2L16 23.5Z" fill="rgba(129, 140, 248, 0.22)" stroke="var(--accent-blue)" stroke-width="1.4" stroke-linejoin="round"/>
+              <path d="M16 18.5L6 13.2L16 8L26 13.2L16 18.5Z" fill="rgba(56, 189, 248, 0.3)" stroke="var(--accent-cyan)" stroke-width="1.6" stroke-linejoin="round"/>
+              <path d="M16 13.5L7 8.5L16 3.5L25 8.5L16 13.5Z" fill="rgba(56, 189, 248, 0.55)" stroke="var(--accent-cyan)" stroke-width="1.8" stroke-linejoin="round"/>
+              <circle cx="16" cy="8.5" r="2" fill="#FFFFFF"/>
             </svg>
             <span class="mobile-brand-name">FOLERIO</span>
           </div>
@@ -773,12 +770,16 @@
       <div class="modal-header auth-modal-header">
         <div class="auth-modal-title-row">
           <div class="auth-modal-emblem">
-            <svg class="auth-emblem-svg" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.75">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#folerioCrestGrad)" stroke-linecap="round" stroke-linejoin="round"/>
+            <svg class="auth-emblem-svg" viewBox="0 0 32 32" width="28" height="28" fill="none">
+              <path d="M16 23.5L6 18.2L16 13L26 18.2L16 23.5Z" fill="rgba(129, 140, 248, 0.22)" stroke="url(#folerioAuthCrestGrad)" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M16 18.5L6 13.2L16 8L26 13.2L16 18.5Z" fill="rgba(56, 189, 248, 0.3)" stroke="url(#folerioAuthCrestGrad)" stroke-width="1.7" stroke-linejoin="round"/>
+              <path d="M16 13.5L7 8.5L16 3.5L25 8.5L16 13.5Z" fill="rgba(56, 189, 248, 0.55)" stroke="url(#folerioAuthCrestGrad)" stroke-width="1.9" stroke-linejoin="round"/>
+              <circle cx="16" cy="8.5" r="2.2" fill="#FFFFFF"/>
               <defs>
-                <linearGradient id="folerioCrestGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <linearGradient id="folerioAuthCrestGrad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
                   <stop stop-color="#38BDF8"/>
-                  <stop offset="1" stop-color="#818CF8"/>
+                  <stop offset="0.5" stop-color="#818CF8"/>
+                  <stop offset="1" stop-color="#C084FC"/>
                 </linearGradient>
               </defs>
             </svg>
