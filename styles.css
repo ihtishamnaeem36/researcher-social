@@ -3458,6 +3458,66 @@ input:focus, select:focus, textarea:focus {
 .scholar-buttons-row {
   display: flex;
   gap: 0.5rem;
+  margin-bottom: 1.15rem;
+}
+
+/* Scholar Settings Hub */
+.scholar-settings-hub {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.15rem;
+}
+
+.settings-hub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-hub-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-cyan);
+}
+
+.settings-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.settings-hub-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-item-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.settings-item-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.btn-xs {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.76rem;
+  border-radius: var(--radius-sm);
+  width: fit-content;
 }
 
 /* Tabbed Profile Grid */
@@ -5038,6 +5098,35 @@ body.focus-reading-mode .focus-exit-pill {
 
 .topbar-notif-badge.hidden, .nav-badge.hidden {
   display: none !important;
+}
+
+.topbar-account-btn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(56, 189, 248, 0.22) 0%, rgba(99, 102, 241, 0.16) 100%), var(--bg-surface);
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.topbar-account-btn:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+  transform: scale(1.06);
+}
+
+.topbar-account-avatar {
+  font-size: 1.05rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Notifications Modal / Window */

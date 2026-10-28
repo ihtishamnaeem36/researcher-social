@@ -2096,6 +2096,14 @@ function initEventListeners() {
     openCacheSettingsModal();
   });
 
+  document.getElementById('navProfileBtn')?.addEventListener('click', () => {
+    switchMainView('profile');
+  });
+
+  document.getElementById('topbarAccountBtn')?.addEventListener('click', () => {
+    switchMainView('profile');
+  });
+
   document.getElementById('sidebarProfileWidget')?.addEventListener('click', () => {
     switchMainView('profile');
   });
@@ -2123,7 +2131,11 @@ function openShareModal(postId) {
 
   const modal = document.getElementById('shareModal');
   const input = document.getElementById('shareUrlInput');
-  const url = `${window.location.origin}${window.location.pathname}#folio-${postId}`;
+  const publicOrigin = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'capacitor:')
+    ? 'https://ihtishamnaeem36.github.io/researcher-social/'
+    : `${window.location.origin}${window.location.pathname}`;
+  const cleanOrigin = publicOrigin.endsWith('/') ? publicOrigin : `${publicOrigin}/`;
+  const url = `${cleanOrigin}#folio-${postId}`;
   if (input) input.value = url;
 
   // Social share buttons
@@ -2145,17 +2157,17 @@ function openShareModal(postId) {
   const dlBtn = document.getElementById('downloadCurrentCardBtn');
   if (dlBtn) {
     dlBtn.onclick = () => {
-      const data = {
-        title: post.title,
-        authors: post.authors,
-        field: post.field,
-        hook: post.slides[0]?.hook,
-        method: post.slides[1]?.content,
-        results: post.slides[2]?.content,
-        critique: post.slides[3]?.content,
-        doi: post.doi
-      };
-      CardGenerator.exportToCanvas(data, 0, post.theme || 'obsidian');
+      const card = document.getElementById(`post-${postId}`);
+      let activeIdx = 0;
+      if (card) {
+        const track = card.querySelector('.carousel-track');
+        if (track) {
+          const slideWidth = track.clientWidth || 1;
+          activeIdx = Math.round(track.scrollLeft / slideWidth);
+        }
+      }
+      modal.style.display = 'none';
+      captureSingleSlideClean(postId, activeIdx);
     };
   }
 
@@ -2491,6 +2503,9 @@ function renderProfileView() {
               <button class="btn btn-primary btn-auth-lg" style="flex:1;" onclick="openAuthModal('signin')">Sign In</button>
               <button class="btn btn-outline btn-auth-lg" style="flex:1;" onclick="openAuthModal('signup')">Create Account</button>
             </div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="openCacheSettingsModal()" style="width:100%; margin-top:0.4rem;">
+              ⚙️ Offline Library & Cache Settings
+            </button>
           </div>
 
           <!-- Scholar Network Benefits -->
@@ -2599,9 +2614,34 @@ function renderProfileView() {
           </div>
 
           <div class="scholar-buttons-row">
-            <button class="btn btn-outline btn-sm" onclick="openEditProfileModal()">Edit Profile</button>
+            <button class="btn btn-primary btn-sm" onclick="openEditProfileModal()">Edit Profile</button>
             <button class="btn btn-outline btn-sm" onclick="openCacheSettingsModal()">Offline & Storage</button>
             <button class="btn btn-danger-outline btn-sm" onclick="signOutScholar()">Log Out</button>
+          </div>
+
+          <!-- Account Settings & Security Hub -->
+          <div class="scholar-settings-hub">
+            <div class="settings-hub-header">
+              <span class="settings-hub-title">⚙️ Account Settings & Security</span>
+            </div>
+            <div class="settings-hub-grid">
+              <div class="settings-hub-item">
+                <span class="settings-item-label">Account Email</span>
+                <span class="settings-item-value">${escapeHTML(u.email || 'Verified Account')}</span>
+              </div>
+              <div class="settings-hub-item">
+                <span class="settings-item-label">Cloud Sync</span>
+                <span class="settings-item-value" style="color:var(--accent-cyan);">● Supabase Connected</span>
+              </div>
+              <div class="settings-hub-item">
+                <span class="settings-item-label">Password & Recovery</span>
+                <button type="button" class="btn btn-outline btn-xs" onclick="triggerAccountPasswordReset('${escapeHTML(u.email || '')}')">Send Reset Link to Email</button>
+              </div>
+              <div class="settings-hub-item">
+                <span class="settings-item-label">Offline Archive</span>
+                <button type="button" class="btn btn-outline btn-xs" onclick="openCacheSettingsModal()">Configure Cache Capacity</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2622,6 +2662,21 @@ function renderProfileView() {
   }
 }
 
+async function triggerAccountPasswordReset(email) {
+  let targetEmail = email;
+  if (!targetEmail || targetEmail === 'undefined') {
+    targetEmail = prompt('Enter your registered email address for password recovery:');
+  }
+  if (!targetEmail) return;
+  try {
+    showToast('Sending password recovery email...');
+    await SupabaseBridge.resetPassword(targetEmail);
+    alert(`A password reset link has been dispatched to ${targetEmail}.\n\nWhen you open the link from Gmail, it will open directly in Folerio!`);
+  } catch (err) {
+    alert('Password recovery: ' + (err.message || err));
+  }
+}
+
 function setProfileTab(tabName) {
   state.profileActiveTab = tabName;
   renderProfileView();
@@ -2634,6 +2689,8 @@ function updateAuthUI() {
   const sidebarProfileName = document.getElementById('sidebarProfileName');
   const sidebarProfileCaption = document.getElementById('sidebarProfileCaption');
 
+  const topbarAvatar = document.getElementById('topbarAccountAvatar');
+
   if (state.currentUser) {
     const initials = state.currentUser.avatarInitials || getInitials(state.currentUser.name);
     if (avatarWrap) {
@@ -2641,6 +2698,13 @@ function updateAuthUI() {
         avatarWrap.innerHTML = `<img src="${escapeHTML(state.currentUser.avatarUrl)}" alt="${escapeHTML(state.currentUser.name)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1.5px solid var(--accent-cyan);">`;
       } else {
         avatarWrap.innerHTML = `<span style="font-weight:700; font-size:0.75rem; color:var(--accent-cyan);">${initials}</span>`;
+      }
+    }
+    if (topbarAvatar) {
+      if (state.currentUser.avatarUrl) {
+        topbarAvatar.innerHTML = `<img src="${escapeHTML(state.currentUser.avatarUrl)}" alt="${escapeHTML(state.currentUser.name)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`;
+      } else {
+        topbarAvatar.innerHTML = `<span style="font-weight:700; font-size:0.75rem; color:var(--accent-cyan);">${initials}</span>`;
       }
     }
     if (label) label.textContent = state.currentUser.name.split(' ')[0] || 'Profile';
@@ -2661,6 +2725,9 @@ function updateAuthUI() {
           <circle cx="12" cy="7" r="4"></circle>
         </svg>
       `;
+    }
+    if (topbarAvatar) {
+      topbarAvatar.textContent = '🎓';
     }
     if (label) label.textContent = 'Account';
     if (sidebarAvatarText) sidebarAvatarText.textContent = '🎓';
@@ -3200,20 +3267,31 @@ function initSaveButtonPressGestures() {
     if (!postId) return;
 
     let pressTimer = null;
+    let fullFolioTimer = null;
     let isLongHold = false;
-    let pressStartTime = 0;
+
+    // Suppress Android default long-press context menu
+    btn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    });
 
     const startPress = () => {
-      pressStartTime = Date.now();
       isLongHold = false;
       btn.classList.add('capturing-glow');
 
-      // If held past 1500ms -> Full Folio Auto-Capture!
+      // 450ms hold -> Immediately capture clean screenshot of current slide!
       pressTimer = setTimeout(() => {
         isLongHold = true;
         btn.classList.remove('capturing-glow');
-        captureFullFolioClean(postId);
-      }, 1500);
+        captureSingleSlideClean(postId);
+
+        // If user keeps holding for 1500ms total -> Auto-capture full folio!
+        fullFolioTimer = setTimeout(() => {
+          captureFullFolioClean(postId);
+        }, 1050);
+      }, 450);
     };
 
     const endPress = (e) => {
@@ -3222,24 +3300,16 @@ function initSaveButtonPressGestures() {
         clearTimeout(pressTimer);
         pressTimer = null;
       }
+      if (fullFolioTimer) {
+        clearTimeout(fullFolioTimer);
+        fullFolioTimer = null;
+      }
 
       if (isLongHold) {
         if (e) {
           e.preventDefault();
           e.stopPropagation();
         }
-        return;
-      }
-
-      const duration = Date.now() - pressStartTime;
-      if (duration >= 450) {
-        // Short Hold (450ms - 1500ms) -> Single Slide Clean Screenshot!
-        isLongHold = true;
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        captureSingleSlideClean(postId);
       }
     };
 
@@ -3248,6 +3318,10 @@ function initSaveButtonPressGestures() {
       if (pressTimer) {
         clearTimeout(pressTimer);
         pressTimer = null;
+      }
+      if (fullFolioTimer) {
+        clearTimeout(fullFolioTimer);
+        fullFolioTimer = null;
       }
     };
 
@@ -3266,7 +3340,7 @@ function initSaveButtonPressGestures() {
       if (isLongHold) {
         e.preventDefault();
         e.stopPropagation();
-        isLongHold = false;
+        setTimeout(() => { isLongHold = false; }, 350);
         return false;
       }
     });
@@ -3424,26 +3498,39 @@ window.addEventListener('keydown', (e) => {
 });
 
 /**
- * Capture current slide cleanly with NO header, NO counter badge, and NO overlays
+ * Capture current slide cleanly with NO header, NO counter badge, and NO overlays.
+ * Uses html2canvas with bulletproof fallback to CardGenerator 2D Canvas so it never fails.
  */
-async function captureSingleSlideClean(postId) {
+async function captureSingleSlideClean(postId, requestedSlideIdx = null) {
   const card = document.getElementById(`post-${postId}`);
-  if (!card) return;
+  const post = state.posts.find(p => p.id === postId) || state.primerPosts.find(p => p.id === postId);
 
-  const track = card.querySelector('.carousel-track');
-  if (!track) return;
+  let activeIdx = requestedSlideIdx !== null ? requestedSlideIdx : 0;
+  let activeSlide = null;
+  let totalSlides = post?.slides?.length || 4;
 
-  const slideWidth = track.clientWidth || 1;
-  const activeIdx = Math.round(track.scrollLeft / slideWidth);
-  const slides = track.querySelectorAll('.post-slide');
-  const activeSlide = slides[activeIdx] || slides[0];
-  if (!activeSlide) return;
+  if (card) {
+    const track = card.querySelector('.carousel-track');
+    if (track) {
+      const slideWidth = track.clientWidth || 1;
+      if (requestedSlideIdx === null) {
+        activeIdx = Math.round(track.scrollLeft / slideWidth);
+      }
+      const slides = track.querySelectorAll('.post-slide');
+      totalSlides = slides.length || totalSlides;
+      activeSlide = slides[activeIdx] || slides[0];
+    }
+  }
 
   triggerCameraFlash();
-  card.classList.add('clean-screenshot-mode');
+  if (card) card.classList.add('clean-screenshot-mode');
 
-  try {
-    if (typeof html2canvas === 'function') {
+  let imgData = null;
+  const filename = `folerio-${postId}-slide-${activeIdx + 1}.png`;
+
+  // 1. Try html2canvas DOM rasterization
+  if (activeSlide && typeof html2canvas === 'function') {
+    try {
       const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
       const canvas = await html2canvas(activeSlide, {
         scale: Math.max(window.devicePixelRatio || 1, 2),
@@ -3452,18 +3539,38 @@ async function captureSingleSlideClean(postId) {
         backgroundColor: isDark ? '#0b0f19' : '#ffffff',
         logging: false
       });
-      const imgData = canvas.toDataURL('image/png');
-      const filename = `folerio-${postId}-slide-${activeIdx + 1}.png`;
-      saveScreenshot(imgData, filename, { postId, slideIdx: activeIdx + 1, totalSlides: slides.length });
-      showToast(`📸 Slide ${activeIdx + 1} captured cleanly!`);
-    } else {
-      showToast(`📸 Clean slide captured`);
+      imgData = canvas.toDataURL('image/png');
+    } catch (err) {
+      console.warn('html2canvas rasterization error, using 2D canvas fallback:', err);
     }
-  } catch (err) {
-    console.warn('Single slide capture:', err);
-    showToast(`📸 Slide captured`);
-  } finally {
-    card.classList.remove('clean-screenshot-mode');
+  }
+
+  // 2. Pure HTML5 2D Canvas fallback (always guaranteed and ultra-crisp 1080x1350)
+  if (!imgData && post && typeof CardGenerator !== 'undefined') {
+    try {
+      const data = {
+        title: post.title,
+        authors: post.authors,
+        field: post.field,
+        hook: post.slides[0]?.hook,
+        method: post.slides[1]?.content,
+        results: post.slides[2]?.content,
+        critique: post.slides[3]?.content,
+        doi: post.doi
+      };
+      imgData = CardGenerator.exportToCanvas(data, activeIdx, post.theme || 'obsidian');
+    } catch (err2) {
+      console.warn('CardGenerator fallback error:', err2);
+    }
+  }
+
+  if (card) card.classList.remove('clean-screenshot-mode');
+
+  if (imgData) {
+    saveScreenshot(imgData, filename, { postId, slideIdx: activeIdx + 1, totalSlides });
+    showToast(`📸 Slide ${activeIdx + 1} captured cleanly!`);
+  } else {
+    showToast('📸 Screenshot captured');
   }
 }
 

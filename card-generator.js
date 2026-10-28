@@ -221,11 +221,23 @@ const CardGenerator = {
     ctx.fillStyle = theme.accent;
     ctx.fillText('FOLERIO • SCHOLARLY DISCOURSE', width - 480, height - 110);
 
-    // Trigger download
-    const link = document.createElement('a');
-    link.download = `folerio-folio-slide-${slideIndex + 1}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    // Universal export & download
+    const imgData = canvas.toDataURL('image/png');
+    const filename = `folerio-folio-slide-${slideIndex + 1}.png`;
+
+    if (typeof window !== 'undefined' && typeof window.saveScreenshot === 'function') {
+      window.saveScreenshot(imgData, filename, { slideIdx: slideIndex + 1 });
+    } else {
+      try {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = imgData;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (e) {}
+    }
+    return imgData;
   },
 
   /**

@@ -87,16 +87,16 @@ jobs:
           retention-days: 30
 
       - name: Publish Direct Release APK
-        uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.4.0
-          name: "Folerio Android v1.4.0 (Colleague Notifications, Permanent Key In-Place Updates & Touch-Optimized Carousel Controls)"
+          tag_name: v1.4.1
+          name: "Folerio Android v1.4.1 (Account & Settings Hub, Public Canonical Links & Slide Screenshot Fixes)"
           body: |
-            ### Folerio Standalone Android APK (v1.4.0)
-            - **Colleague & Folio Notification Center:** Real-time in-app alerts whenever fellow colleagues connect with you, send messages/replies in discussions, or publish/share breakthrough research folios. Includes direct jump-and-pulse navigation to shared folios and unread badge counters.
-            - **Seamless In-Place APK Updates:** Fixed the *"app not installed / couldn't install"* signature mismatch error by permanently embedding a persistent release certificate keystore (`folerio-release.keystore`). Future APK downloads now smoothly update and replace existing installations without data loss or uninstall prompts.
-            - **Touch-Optimized Carousel Controls (Laptop Web vs. Android App):** On laptop and desktop browsers, sleek glassmorphic navigation buttons (`‹` and `›`) provide seamless mouse clicks. On Android and touch screens, buttons are automatically hidden for an unobstructed, edge-to-edge finger swipe experience.
+            ### Folerio Standalone Android APK (v1.4.1)
+            - **Canonical Auth & Email Redirects:** Fixed Gmail confirmation and password recovery links pointing to `localhost:3000`. All Supabase auth and recovery emails now direct to the live public platform (`https://ihtishamnaeem36.github.io/researcher-social/`).
+            - **Folio Save & Share Fixes:** Fixed folio PNG export to dynamically render and save the exact folio and slide currently in view, saving directly into Android Gallery (`Pictures/Folerio`) and generating public canonical URLs.
+            - **Instant Long-Press Save Screenshot:** Holding the bookmark icon for 450ms now reliably triggers the clean screenshot capture with camera flash and haptics, resolving Android WebView contextmenu cancellations.
+            - **Scholar Account & Settings Hub:** Added direct Account & Settings access in the top bar and sidebar navigation with live email status, 1-click password reset link dispatch, profile credential editing, and offline cache capacity controls.
+            - **Colleague & Folio Notification Center:** Real-time in-app alerts whenever fellow colleagues connect, discuss, or share breakthrough research folios.
             - **Universal Disciplines of the World (22 Disciplines):** Expanded to encompass the full spectrum of human inquiry: Natural Sciences, Formal Sciences, Engineering & Tech, Medical & Health Sciences, Social Sciences, and Humanities & Arts.
             - **Impact-Weighted Stream Algorithm:** High-velocity, globally famous fields (AI & ML, Biotech, Quantum, Neuroscience, Clinical Medicine, Materials, Economics, Climate, Robotics, Psychology, Astrophysics) appear with higher frequency (~72%), smoothly interleaved with breakthroughs from Pure Math, Philosophy, Archaeology, Law, Linguistics, and Ecology.
             - **1,730+ Breakthrough Research Folios:** Real peer-reviewed landmarks from OpenAlex with 4-slide visual carousels, 4-section book-style expositions, and scholarly peer reviews.

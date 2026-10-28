@@ -71,6 +71,21 @@ const SupabaseBridge = {
   },
 
   /**
+   * Always resolve to the real, public production URL so confirmation/recovery emails
+   * open on any device without "localhost refuse to connect" errors.
+   */
+  getCanonicalRedirectUrl() {
+    const isLocalDevServer = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      && window.location.port && window.location.port !== '' && window.location.port !== '80' && window.location.port !== '443'
+      && typeof window.FolerioNative === 'undefined';
+
+    if (isLocalDevServer) {
+      return `${window.location.origin}${window.location.pathname}`;
+    }
+    return 'https://ihtishamnaeem36.github.io/researcher-social/';
+  },
+
+  /**
    * Launch official Google OAuth login
    */
   signInWithGoogle() {
@@ -79,10 +94,7 @@ const SupabaseBridge = {
       return;
     }
 
-    const redirectUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? `${window.location.origin}${window.location.pathname}`
-      : 'https://ihtishamnaeem36.github.io/researcher-social/';
-
+    const redirectUrl = this.getCanonicalRedirectUrl();
     const authUrl = `${this.config.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
 
     if (window.FolerioNative && typeof window.FolerioNative.openExternalUrl === 'function') {
@@ -99,7 +111,9 @@ const SupabaseBridge = {
     if (!this.config.isConnected) throw new Error('Supabase is not connected.');
 
     const name = fullName.trim() || email.split('@')[0];
-    const res = await fetch(`${this.config.url}/auth/v1/signup`, {
+    const redirectUrl = this.getCanonicalRedirectUrl();
+
+    const res = await fetch(`${this.config.url}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectUrl)}`, {
       method: 'POST',
       headers: {
         'apikey': this.config.anonKey,
@@ -111,6 +125,9 @@ const SupabaseBridge = {
         data: {
           full_name: name,
           name: name
+        },
+        options: {
+          emailRedirectTo: redirectUrl
         }
       })
     });
@@ -160,9 +177,7 @@ const SupabaseBridge = {
   async resetPassword(email) {
     if (!this.config.isConnected) throw new Error('Supabase is not connected.');
 
-    const redirectUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? `${window.location.origin}${window.location.pathname}`
-      : 'https://ihtishamnaeem36.github.io/researcher-social/';
+    const redirectUrl = this.getCanonicalRedirectUrl();
 
     const res = await fetch(`${this.config.url}/auth/v1/recover`, {
       method: 'POST',
