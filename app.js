@@ -389,12 +389,36 @@ async function checkForLiveUpdates() {
           }
           renderFeed();
           renderExploreFeed();
+          renderExploreDisciplinesGrid();
         }
       }
     }
   } catch (err) {
-    // Graceful offline fallback
-    console.log('[Folerio OTA] Offline or network check skipped');
+    console.log('[Folerio OTA] Frontier network check skipped');
+  }
+
+  // Also check for new foundational primers over the air
+  try {
+    const remotePRes = await fetch('https://ihtishamnaeem36.github.io/researcher-social/primer-data.json?t=' + Date.now(), {
+      cache: 'no-store'
+    });
+    if (remotePRes.ok) {
+      const remotePData = await remotePRes.json();
+      if (Array.isArray(remotePData) && remotePData.length > 0) {
+        const existingPrimerIds = new Set(state.primerPosts.map(p => p.id));
+        const newPrimers = remotePData.filter(p => !existingPrimerIds.has(p.id));
+        if (newPrimers.length > 0) {
+          console.log(`[Folerio OTA] Auto-merged ${newPrimers.length} new foundational primers.`);
+          state.primerPosts = [...state.primerPosts, ...newPrimers];
+          if (typeof FolioCacheDB !== 'undefined') {
+            FolioCacheDB.cacheFolios(state.primerPosts, 'primer').catch(console.warn);
+          }
+          renderFeed();
+        }
+      }
+    }
+  } catch (err) {
+    console.log('[Folerio OTA] Primer network check skipped');
   }
 }
 
@@ -1146,6 +1170,36 @@ function getFolioExposition(post) {
       'Probing ultrafast non-equilibrium transitions in condensed matter requires tracking atomic lattice movements on sub-picosecond timescales.',
       'Developing next-generation energy storage materials demands resolving the chronic conflict between high ionic conductivity and long-term chemical stability.',
       'Characterizing light-driven phase transitions in strongly correlated electron systems has long been complicated by overlapping transient optical signatures.'
+    ],
+    'Climate & Earth Systems': [
+      'Characterizing multi-scale biosphere-atmosphere feedbacks and tipping dynamics requires coupling high-resolution observational telemetry with fluid dynamic planetary models.',
+      'Quantifying oceanic heat uptake and overturning circulation rates has historically been constrained by sparse deep-sea sensor deployments.',
+      'Predicting non-linear cryosphere collapse demands integrating ice-sheet rheology with changing sub-glacial hydrological boundary conditions.',
+      'Isolating anthropogenic climate forcing from natural decadal oscillations requires rigorous statistical filtering across century-long datasets.'
+    ],
+    'Robotics & Autonomous Systems': [
+      'Achieving robust physical autonomy demands closing the perception-action loop under non-stationary dynamics, actuator saturation, and unpredictable contact mechanics.',
+      'A primary bottleneck in embodied intelligence is transferring high-fidelity simulated policies to noisy physical hardware without catastrophic failure.',
+      'Coordinating multi-robot cooperative swarms in unmapped environments requires distributed consensus mechanisms resilient against intermittent communication dropouts.',
+      'Dynamic bipedal and quadrupedal locomotion requires real-time whole-body optimization to prevent loss of balance over irregular terrains.'
+    ],
+    'Computational Chemistry': [
+      'Simulating chemical reaction pathways and macromolecular binding kinetics requires bridging quantum electronic structure calculations with macroscopic thermodynamic scales.',
+      'Accurate prediction of catalytic transition states has long been hindered by the exponential growth of multi-electron configuration spaces.',
+      'Designing selective molecular inhibitors demands calculating free energy binding perturbation landscapes with sub-kilocalorie precision.',
+      'Integrating machine learning potentials into molecular dynamics simulations must guarantee strict conservation of physical symmetries and energy.'
+    ],
+    'Cryptographic Science': [
+      'Establishing verifiable computational trust and privacy guarantees requires mathematical hard problems resilient against both classical side-channel attacks and quantum cryptanalysis.',
+      'Developing practical zero-knowledge proof protocols requires minimizing prover memory footprints while ensuring sub-millisecond verification times.',
+      'Modern distributed consensus mechanisms must preserve safety and liveness under asynchronous, adversarial network partitions.',
+      'Transitioning modern public-key infrastructure to post-quantum lattice primitives introduces critical trade-offs between key size and handshake latency.'
+    ],
+    'Cognitive Science': [
+      'Understanding biological intelligence requires formulating mathematical principles that explain how bounded cognitive agents form adaptive representations under severe information constraints.',
+      'A foundational puzzle in cognitive science is how semantic knowledge is organized and retrieved from distributed neural memory networks.',
+      'Characterizing human decision-making under uncertainty reveals systematic heuristic shortcuts that diverge from classical rational choice models.',
+      'Investigating executive cognitive control demands isolating how the prefrontal cortex gates task-relevant sensory information while suppressing interference.'
     ]
   };
 
@@ -2095,7 +2149,11 @@ const EXPLORE_DISCIPLINES = [
   { name: 'Quantum Computing', icon: '⚛️', color: '#fbbf24' },
   { name: 'Astrophysics & Space', icon: '🔭', color: '#c084fc' },
   { name: 'Materials Science', icon: '🔬', color: '#f59e0b' },
-  { name: 'Biophysics & Complexity', icon: '🪐', color: '#38bdf8' }
+  { name: 'Climate & Earth Systems', icon: '🌿', color: '#10b981' },
+  { name: 'Robotics & Autonomous Systems', icon: '🤖', color: '#06b6d4' },
+  { name: 'Computational Chemistry', icon: '🧪', color: '#ec4899' },
+  { name: 'Cryptographic Science', icon: '🔐', color: '#8b5cf6' },
+  { name: 'Cognitive Science', icon: '💡', color: '#f97316' }
 ];
 
 function renderExploreDisciplinesGrid() {

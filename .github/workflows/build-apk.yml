@@ -85,12 +85,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.0
-          name: "Folerio Android v1.0.0 (100% Offline & Auto-Syncing)"
+          tag_name: v1.1.0
+          name: "Folerio Android v1.1.0 (1,250+ Folios, 11 Disciplines & Foundations 101)"
           body: |
-            ### Folerio Standalone Android APK (v1.0.0)
-            - **100% Offline First:** All 1,000+ research folios are pre-bundled directly inside the APK. The app opens instantly without internet and works in Airplane Mode.
-            - **Native Photos / Gallery Screenshot:** Hold the Like button on any card to take a clean screenshot without headers or overlays; automatically saved to your phone's Gallery in `Pictures/Folerio`.
-            - **Seamless OTA Updates:** When connected to the internet, newly published research folios and app updates sync automatically in the background.
-            - **Direct Download:** Click `Folerio.apk` below to install directly on your phone.
+            ### Folerio Standalone Android APK (v1.1.0)
+            - **11 Scientific Disciplines:** Now featuring AI & ML, Biotech, Neuroscience, Quantum, Astrophysics, Materials Science, Climate & Earth Systems, Robotics, Computational Chemistry, Cryptographic Science, and Cognitive Science.
+            - **1,250+ Frontier Research Folios:** Real peer-reviewed literature synthesized into 4-slide visual carousels with deep-dive book-page expositions.
+            - **24 Foundational 101 Primers:** Dedicated first-principles masterclasses for curious minds and students.
+            - **100% Offline First:** All folios are pre-bundled inside the APK. Works seamlessly in Airplane Mode.
+            - **Native Photo Gallery Screenshot:** Long-press or click the Share icon to capture clean card cards directly to your phone's Gallery (`Pictures/Folerio`).
+            - **Over-The-Air (OTA) Live Sync:** In-app background synchronization fetches newly published research without needing to reinstall.
+            - **Direct Download:** Download `Folerio.apk` below and tap Install/Update.
           files: output/Folerio.apk
