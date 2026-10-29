@@ -138,12 +138,25 @@ public class MainActivity extends BridgeActivity {
 
     private void openInAppAuthDialog(final String authUrl) {
         try {
-            if (mAuthDialog != null && mAuthDialog.isShowing()) {
-                mAuthDialog.dismiss();
+            if (mAuthDialog != null) {
+                try {
+                    if (mAuthDialog.isShowing()) {
+                        mAuthDialog.dismiss();
+                    }
+                } catch (Exception ignored) {}
+                mAuthDialog = null;
             }
 
-            final android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_DeviceDefault_NoActionBar);
+            final android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
             mAuthDialog = dialog;
+
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setLayout(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                );
+                dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xFF0F172A));
+            }
 
             android.widget.LinearLayout root = new android.widget.LinearLayout(this);
             root.setOrientation(android.widget.LinearLayout.VERTICAL);
@@ -181,7 +194,11 @@ public class MainActivity extends BridgeActivity {
             closeBtn.setOnClickListener(new android.view.View.OnClickListener() {
                 @Override
                 public void onClick(android.view.View v) {
-                    dialog.dismiss();
+                    try {
+                        if (dialog.isShowing()) {
+                            dialog.dismiss();
+                        }
+                    } catch (Exception ignored) {}
                 }
             });
             header.addView(closeBtn, closeLp);
@@ -197,6 +214,7 @@ public class MainActivity extends BridgeActivity {
             android.webkit.WebSettings settings = authWebView.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
+            settings.setDatabaseEnabled(true);
             settings.setSupportMultipleWindows(false);
             settings.setJavaScriptCanOpenWindowsAutomatically(true);
 
@@ -212,28 +230,73 @@ public class MainActivity extends BridgeActivity {
                 cookieManager.setAcceptThirdPartyCookies(authWebView, true);
             }
 
+            dialog.setOnDismissListener(new android.content.DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(android.content.DialogInterface d) {
+                    mAuthDialog = null;
+                    try {
+                        authWebView.stopLoading();
+                        authWebView.clearHistory();
+                        authWebView.destroy();
+                    } catch (Exception ignored) {}
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            WebView mainWeb = getBridge() != null ? getBridge().getWebView() : null;
+                            if (mainWeb != null) {
+                                mainWeb.evaluateJavascript("if (typeof window.onInAppAuthClosed === 'function') { window.onInAppAuthClosed(); }", null);
+                            }
+                        }
+                    });
+                }
+            });
+
             authWebView.setWebViewClient(new android.webkit.WebViewClient() {
                 private boolean handleUrlIntercept(String url) {
                     if (url == null || url.isEmpty()) return false;
 
-                    // Intercept any tokens or redirects
-                    boolean hasTokens = url.contains("access_token=") || url.contains("refresh_token=") || url.contains("code=") || url.contains("error_description=");
+                    Uri uri = null;
+                    try {
+                        uri = Uri.parse(url);
+                    } catch (Exception e) {
+                        return false;
+                    }
+
+                    String host = uri.getHost();
+
+                    // CRITICAL: NEVER intercept Google or Supabase internal auth exchange pages!
+                    // Google redirects to Supabase /auth/v1/callback, and Supabase must process the code.
+                    if (host != null) {
+                        String lowerHost = host.toLowerCase();
+                        if (lowerHost.endsWith("supabase.co") && url.contains("/auth/v1/callback")) {
+                            return false; // Allow Supabase to receive Google's auth code and complete exchange!
+                        }
+                        if (lowerHost.contains("google.") || lowerHost.contains("googleapis.") || lowerHost.contains("gstatic.") || lowerHost.contains("accounts.youtube.")) {
+                            return false; // Allow Google account chooser and login pages to function
+                        }
+                    }
+
+                    // Intercept any tokens or terminal redirects (to localhost, custom scheme, or app domain)
+                    boolean hasTokens = url.contains("access_token=") || url.contains("refresh_token=");
                     boolean isLocalhost = url.startsWith("http://localhost") || url.startsWith("https://localhost") || url.startsWith("http://127.0.0.1");
                     boolean isFolerioScheme = url.startsWith("folerio://");
                     boolean isGithubPages = url.startsWith("https://ihtishamnaeem36.github.io/researcher-social");
 
-                    if (hasTokens || isLocalhost || isFolerioScheme || isGithubPages) {
+                    // Check if this is the final redirect containing tokens or destination
+                    if (hasTokens || isLocalhost || isFolerioScheme || (isGithubPages && (url.contains("#") || url.contains("?")))) {
                         try {
-                            String fragment = null;
-                            String query = null;
-                            if (url.contains("#")) {
-                                fragment = url.substring(url.indexOf('#') + 1);
+                            String fragment = uri.getFragment();
+                            String query = uri.getQuery();
+                            String fullStr = url;
+
+                            if ((fragment == null || fragment.isEmpty()) && fullStr.contains("#")) {
+                                fragment = fullStr.substring(fullStr.indexOf('#') + 1);
                             }
-                            if (url.contains("?")) {
-                                int qStart = url.indexOf('?');
-                                int qEnd = url.contains("#") ? url.indexOf('#') : url.length();
+                            if ((query == null || query.isEmpty()) && fullStr.contains("?")) {
+                                int qStart = fullStr.indexOf('?');
+                                int qEnd = fullStr.contains("#") ? fullStr.indexOf('#') : fullStr.length();
                                 if (qEnd > qStart) {
-                                    query = url.substring(qStart + 1, qEnd);
+                                    query = fullStr.substring(qStart + 1, qEnd);
                                 }
                             }
 
@@ -246,7 +309,7 @@ public class MainActivity extends BridgeActivity {
                                     WebView mainWeb = getBridge() != null ? getBridge().getWebView() : null;
                                     if (mainWeb != null) {
                                         if (finalFrag != null && !finalFrag.isEmpty()) {
-                                            mainWeb.evaluateJavascript("window.location.hash = '" + finalFrag.replace("'", "\\'") + "'; if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect(); }", null);
+                                            mainWeb.evaluateJavascript("if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect('" + finalFrag.replace("'", "\\'") + "'); }", null);
                                         } else if (finalQuery != null && !finalQuery.isEmpty()) {
                                             mainWeb.evaluateJavascript("if (window.SupabaseBridge) { SupabaseBridge.handleAuthQuery('" + finalQuery.replace("'", "\\'") + "'); }", null);
                                         }
@@ -258,10 +321,29 @@ public class MainActivity extends BridgeActivity {
                         }
 
                         // Close dialog cleanly without network error
-                        dialog.dismiss();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    if (dialog.isShowing()) {
+                                        dialog.dismiss();
+                                    }
+                                } catch (Exception ignored) {}
+                                mAuthDialog = null;
+                            }
+                        });
                         return true;
                     }
                     return false;
+                }
+
+                @Override
+                public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                    if (handleUrlIntercept(url)) {
+                        view.stopLoading();
+                        return;
+                    }
+                    super.onPageStarted(view, url, favicon);
                 }
 
                 @Override
@@ -281,8 +363,7 @@ public class MainActivity extends BridgeActivity {
 
                 @Override
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                    if (failingUrl != null && (failingUrl.contains("localhost") || failingUrl.contains("access_token"))) {
-                        handleUrlIntercept(failingUrl);
+                    if (failingUrl != null && handleUrlIntercept(failingUrl)) {
                         return;
                     }
                     super.onReceivedError(view, errorCode, description, failingUrl);

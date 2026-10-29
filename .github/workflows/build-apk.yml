@@ -90,14 +90,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.5
-          name: "Folerio Android v1.5.5 (Instagram Timestamps, iOS Grouped Platter, Decluttered Feed)"
+          tag_name: v1.5.6
+          name: "Folerio Android v1.5.6 (Fixed Google OAuth Callback Interception & In-App Auth Dialog Lifecycle)"
           body: |
-            ### Folerio Standalone Android APK (v1.5.5)
-            - **Privacy & Data Honesty (Zero Fake Signals):** Completely removed invented account age and feed-card GI score badges. All author cards in the feed now exclusively show the author name and clean, authentic relative timestamps (`just now`, `2h`, `yesterday`, `3d`, `12 Oct`), matching Instagram's human-readable format.
-            - **Profile-Bound Career Signals:** GI score, publications, and career metrics are relocated strictly to the User Profile view, keeping the feed quiet and focused on research content.
-            - **Apple iOS-Style Grouped Platter for Book Sequences:** Transformed book sequences into a unified rounded platter with hairline dividers, quiet sequence indicators, and clean reading topic previews instead of separate blocks.
-            - **Eliminated Repetitive Collection Headers:** Book reading slides (slides 1, 2, and 3) now provide an unobstructed, clean reading canvas with all redundant top banners removed.
-            - **Moved Theme & Display Matrix to Settings:** Removed visual clutter from the main topbar; reading themes and cache settings are cleanly consolidated inside the Settings modal.
+            ### Folerio Standalone Android APK (v1.5.6)
+            - **Google OAuth Callback Fix:** Resolved issue where Google's auth code was prematurely intercepted before Supabase could process the authentication callback. The native bridge now permits Supabase and Google authentication exchange pages to finish normally, intercepting only the final session tokens (`access_token` and `refresh_token`).
+            - **Dialog Reopen & Lifecycle Cleanup:** Added proper dialog teardown and `onDismiss` handling, ensuring the in-app Google Sign-In window opens smoothly every time without hanging or getting stuck after a first attempt.
+            - **Instant Token Handshake:** Injected tokens directly into `SupabaseBridge.handleAuthRedirect(fragment)` for instantaneous sign-in and profile synchronization.
             - **Direct Download:** Download `Folerio.apk` below and tap Install/Update.
           files: output/Folerio.apk

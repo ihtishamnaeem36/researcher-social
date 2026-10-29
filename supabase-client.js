@@ -289,12 +289,15 @@ const SupabaseBridge = {
   /**
    * Handles OAuth callback from Google (URL hash fragment `#access_token=...`)
    */
-  async handleAuthRedirect() {
-    const hash = window.location.hash;
+  async handleAuthRedirect(directFragment) {
+    const hash = (typeof directFragment === 'string' && directFragment.length > 0)
+      ? directFragment
+      : (window.location.hash || '');
     if (!hash || !hash.includes('access_token=')) return null;
 
     try {
-      const params = new URLSearchParams(hash.replace(/^#/, ''));
+      const cleanHash = hash.replace(/^#/, '');
+      const params = new URLSearchParams(cleanHash);
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
       const expiresIn = params.get('expires_in');

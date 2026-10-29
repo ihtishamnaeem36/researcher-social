@@ -3599,6 +3599,14 @@ window.instantScholarLogin = function(name, email) {
   showToast(`Signed in as ${mockUser.name}! 🎓`);
 };
 
+window.onInAppAuthClosed = function() {
+  const alertBox = document.getElementById('authAlertBox');
+  if (alertBox) {
+    alertBox.style.display = 'none';
+    alertBox.innerHTML = '';
+  }
+};
+
 async function signOutScholar() {
   await SupabaseBridge.signOut();
   state.currentUser = null;
