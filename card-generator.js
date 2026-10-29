@@ -55,6 +55,69 @@ const CardGenerator = {
     const theme = this.themes[themeName] || this.themes.obsidian;
     const isEditorial = themeName === 'editorial';
 
+    if (data.isBook) {
+      const bookCiting = `${data.bookTitle || 'Textbook'}${data.bookEdition ? ' (' + data.bookEdition + ')' : ''} &bull; ${data.bookChapter || 'Chapter 1'}${data.bookChapterTitle ? ' ' + data.bookChapterTitle : ''}`;
+      if (slideIndex === 0) {
+        return `
+          <div class="slide-badge-row">
+            <span class="slide-label book-badge-label" style="color: #a78bfa;">📖 Book Chapter Excerpt</span>
+            <span class="post-tag book-tag" style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd;">📖 ${data.field || 'Science'}</span>
+          </div>
+
+          <div class="book-two-tier-header" style="margin-top:0.4rem;">
+            <div class="book-main-topic-btn" style="pointer-events: none;">
+              <span class="book-main-topic-icon">📖</span>
+              <div class="book-main-topic-text-group">
+                <span class="book-main-topic-eyebrow">Book Collection</span>
+                <span class="book-main-topic-title">${data.bookCollection || 'Chapter Collection'}</span>
+              </div>
+              <span class="book-main-topic-action">Sequence ▾</span>
+            </div>
+
+            <h2 class="paper-hero-title book-hero-title" style="margin: 0.25rem 0;">${data.title || 'Subtopic Title'}</h2>
+            <div class="breakthrough-hook book-hook">
+              "${data.hook || 'Write a 1-sentence core principle or concept...'}"
+            </div>
+          </div>
+
+          <div class="slide-footer-row book-footer-row" style="margin-top:auto;">
+            <div class="book-bottom-citation">
+              <span class="book-citation-icon">📚</span>
+              <span class="book-citation-text">${bookCiting}</span>
+            </div>
+          </div>
+        `;
+      } else {
+        const stepLabels = ['[02] Mechanism & Excerpt', '[03] Concrete Analogy & Figures', '[04] Broader Reflections'];
+        const contentTexts = [
+          data.method || 'Add excerpt text, mechanism details, or foundational concept...',
+          data.results || 'Add concrete examples, analogies (e.g. train-cars analogy), or observations...',
+          data.critique || 'Add broader implications, evolutionary context, or classroom reflection...'
+        ];
+        return `
+          <div class="slide-badge-row">
+            <span class="dive-section-tag book-dive-tag" style="color: #a78bfa;">${stepLabels[slideIndex - 1]}</span>
+            <span class="post-tag book-tag" style="background: rgba(139, 92, 246, 0.15); color: #c4b5fd;">📖 ${data.field || 'Science'}</span>
+          </div>
+          <div class="book-dive-body">
+            <div class="book-dive-compact-topic" style="pointer-events: none; margin-bottom: 0.35rem;">
+              <span>📖 ${data.bookCollection || data.bookTitle || 'Chapter Topic'}</span>
+            </div>
+            <h3 class="dive-heading book-dive-heading">${data.title || 'In-Depth Breakdown'}</h3>
+            <div class="dive-content book-dive-content">
+              <p>${contentTexts[slideIndex - 1]}</p>
+            </div>
+          </div>
+          <div class="slide-footer-row book-footer-row" style="margin-top:auto;">
+            <div class="book-bottom-citation">
+              <span class="book-citation-icon">📚</span>
+              <span class="book-citation-text">${bookCiting}</span>
+            </div>
+          </div>
+        `;
+      }
+    }
+
     if (slideIndex === 0) {
       // Slide 1: Hero / Breakthrough hook
       return `
@@ -118,7 +181,7 @@ const CardGenerator = {
         <div class="slide-dive-body">
           <h3 class="dive-heading">Critical Evaluation</h3>
           <div class="dive-content">
-            <p>${data.critique || 'Add caveats, open questions, failure modes, or future exploration areas...'}</p>
+            <p>${data.critique || 'Add caveats, open research frontiers, theoretical challenges...'}</p>
           </div>
         </div>
         <div class="slide-footer-row">

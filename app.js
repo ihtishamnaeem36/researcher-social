@@ -203,6 +203,8 @@ const state = {
   profileActiveTab: 'folios', // 'folios' | 'saved' | 'colleagues' | 'topics'
   notifications: [],
   activeNotifFilter: 'all',
+  studioFormat: 'paper', // 'paper' | 'book'
+  currentThemeMode: 'app-dark-folio-light',
   creator: {
     activeSlideIndex: 0,
     selectedTheme: 'obsidian',
@@ -286,43 +288,119 @@ function renderOAuthConsentModal() {
 }
 
 /* ==========================================================================
-   Theme Management (Dark / Light)
+   Theme Matrix & Decoupled Reader Modes (Task 2)
+   Modes:
+   - 'app-dark-folio-light': Editorial Reader (Dark App + Light Parchment Folios)
+   - 'app-light-folio-dark': Inverted Focus (Light App + Obsidian Dark Folios)
+   - 'unified-dark': Unified Obsidian (Dark App + Dark Folios)
+   - 'unified-light': Unified Swiss Light (Light App + Light Folios)
    ========================================================================== */
+const THEME_MATRIX_MODES = {
+  'app-dark-folio-light': { app: 'dark', folio: 'light', name: 'Editorial Reader', pill: 'Editorial' },
+  'app-light-folio-dark': { app: 'light', folio: 'dark', name: 'Inverted Focus', pill: 'Inverted' },
+  'unified-dark':         { app: 'dark', folio: 'dark', name: 'Unified Obsidian', pill: 'Obsidian' },
+  'unified-light':        { app: 'light', folio: 'light', name: 'Unified Swiss Light', pill: 'Swiss Light' }
+};
+
 function initTheme() {
-  const savedTheme = localStorage.getItem('folerio_theme') || localStorage.getItem('noesis_theme') || 'dark';
-  applyTheme(savedTheme);
+  const savedMatrix = localStorage.getItem('folerio_theme_matrix');
+  if (savedMatrix && THEME_MATRIX_MODES[savedMatrix]) {
+    applyThemeMatrix(savedMatrix);
+    return;
+  }
+  const legacy = localStorage.getItem('folerio_theme') || localStorage.getItem('noesis_theme');
+  if (legacy === 'light') {
+    applyThemeMatrix('unified-light');
+  } else {
+    // Default to Editorial Reader mode for maximal legibility on books & papers
+    applyThemeMatrix('app-dark-folio-light');
+  }
 }
 
-function applyTheme(theme) {
-  state.currentTheme = theme;
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('folerio_theme', theme);
+function applyThemeMatrix(mode) {
+  if (!THEME_MATRIX_MODES[mode]) mode = 'app-dark-folio-light';
+  state.currentThemeMode = mode;
+  const config = THEME_MATRIX_MODES[mode];
+  state.currentTheme = config.app;
 
+  document.documentElement.setAttribute('data-theme', config.app);
+  document.documentElement.setAttribute('data-folio-theme', config.folio);
+  document.documentElement.setAttribute('data-theme-mode', mode);
+
+  localStorage.setItem('folerio_theme_matrix', mode);
+  localStorage.setItem('folerio_theme', config.app);
+
+  // Update Sidebar & Topbar UI
   const themeIcon = document.getElementById('themeIcon');
   const themeLabel = document.getElementById('themeLabel');
   if (themeIcon && themeLabel) {
-    if (theme === 'light') {
-      themeIcon.textContent = '☀️';
-      themeLabel.textContent = 'Light Mode';
-    } else {
-      themeIcon.textContent = '🌙';
-      themeLabel.textContent = 'Dark Mode';
-    }
+    themeIcon.textContent = config.app === 'light' ? '☀️' : '🌙';
+    themeLabel.textContent = config.app === 'light' ? 'Light Mode' : 'Dark Mode';
   }
 
-  const mobileThemeEmoji = document.getElementById('mobileThemeEmoji');
-  const mobileThemeLabel = document.getElementById('mobileThemeLabel');
-  if (mobileThemeEmoji) {
-    mobileThemeEmoji.textContent = theme === 'light' ? '☀️' : '🌙';
+  const sidebarMatrixPill = document.getElementById('sidebarMatrixPill');
+  if (sidebarMatrixPill) {
+    sidebarMatrixPill.textContent = config.pill;
   }
-  if (mobileThemeLabel) {
-    mobileThemeLabel.textContent = theme === 'light' ? 'Light' : 'Dark';
+
+  const topbarThemeIcon = document.getElementById('topbarThemeIcon');
+  if (topbarThemeIcon) {
+    topbarThemeIcon.textContent = config.folio === 'light' ? '📖' : '🌙';
+  }
+
+  const statusText = document.getElementById('themeMatrixStatusText');
+  if (statusText) {
+    statusText.innerHTML = `Current active: <strong>${config.name}</strong>`;
+  }
+
+  // Update active cards in Theme Matrix Modal
+  document.querySelectorAll('.matrix-option-card').forEach(card => {
+    if (card.dataset.mode === mode) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+}
+
+function applyTheme(theme) {
+  if (theme === 'light') {
+    applyThemeMatrix('unified-light');
+  } else {
+    applyThemeMatrix('unified-dark');
   }
 }
 
 function toggleTheme() {
-  const nextTheme = state.currentTheme === 'dark' ? 'light' : 'dark';
-  applyTheme(nextTheme);
+  const current = state.currentThemeMode || 'app-dark-folio-light';
+  let next = 'unified-dark';
+  if (current === 'app-dark-folio-light') next = 'app-light-folio-dark';
+  else if (current === 'app-light-folio-dark') next = 'app-dark-folio-light';
+  else if (current === 'unified-dark') next = 'unified-light';
+  else if (current === 'unified-light') next = 'unified-dark';
+  applyThemeMatrix(next);
+}
+
+function openThemeMatrixModal() {
+  const modal = document.getElementById('themeMatrixModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.querySelectorAll('.matrix-option-card').forEach(card => {
+    card.classList.toggle('active', card.dataset.mode === state.currentThemeMode);
+  });
+}
+
+function closeThemeMatrixModal() {
+  const modal = document.getElementById('themeMatrixModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function selectThemeMatrixMode(mode) {
+  applyThemeMatrix(mode);
+  showToast(`Reading theme set to: ${THEME_MATRIX_MODES[mode]?.name || mode}`, 'success');
 }
 
 function updateSupabaseStatusIndicator() {
@@ -769,6 +847,224 @@ function initInfiniteScroll() {
   }, { passive: true });
 }
 
+/* ==========================================================================
+   Account Age & Global Impact (GI) Score Metric System (Task 4)
+   ========================================================================== */
+function formatAccountAge(dateStr) {
+  if (!dateStr) return '1y';
+  const created = new Date(dateStr).getTime();
+  if (isNaN(created)) return '1y';
+  const diffDays = Math.max(1, Math.floor((Date.now() - created) / (1000 * 60 * 60 * 24)));
+  if (diffDays < 7) return `${diffDays}d`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}m`;
+  const years = Math.floor(diffDays / 365);
+  return `${years}y`;
+}
+
+function calculateScholarGiScore(scholarName) {
+  const author = (scholarName || '').toLowerCase().trim();
+  const allPosts = state.posts || [];
+
+  const scholarPosts = allPosts.filter(p => {
+    const a = (p.authors || '').toLowerCase();
+    return a.includes(author) || (author && a.includes(author.split(' ')[0]));
+  });
+
+  const researchPapers = scholarPosts.filter(p => !p.isBookFolio);
+  const bookFolios = scholarPosts.filter(p => p.isBookFolio);
+
+  let seedTrackA = 580;
+  let seedTrackB = 420;
+  let seedIlluminations = 480;
+  let seedSaves = 240;
+  let seedDiscussions = 95;
+
+  if (author.includes('hartwell') || author.includes('goldberg') || author.includes('fischer')) {
+    seedTrackA = 940;
+    seedTrackB = 920;
+    seedIlluminations = 1420;
+    seedSaves = 890;
+    seedDiscussions = 340;
+  } else if (author.includes('alberts') || author.includes('johnson') || author.includes('lewis')) {
+    seedTrackA = 910;
+    seedTrackB = 980;
+    seedIlluminations = 1560;
+    seedSaves = 940;
+    seedDiscussions = 310;
+  } else if (state.currentUser && (state.currentUser.name || '').toLowerCase().includes(author)) {
+    const myLikes = scholarPosts.reduce((acc, p) => acc + (p.likes || 1), 0);
+    seedTrackA = (researchPapers.length * 100) + (myLikes * 10);
+    seedTrackB = (bookFolios.length * 80) + (state.savedPostIds.size * 15);
+    seedIlluminations = myLikes;
+    seedSaves = state.savedPostIds.size;
+    seedDiscussions = scholarPosts.reduce((acc, p) => acc + (p.comments ? p.comments.length : 0), 0);
+  } else {
+    const postLikes = scholarPosts.reduce((acc, p) => acc + (p.likes || 1), 0);
+    seedTrackA += (researchPapers.length * 80) + (postLikes * 8);
+    seedTrackB += (bookFolios.length * 90);
+    seedIlluminations += postLikes;
+  }
+
+  const trackA = Math.max(120, seedTrackA);
+  const trackB = Math.max(80, seedTrackB);
+  const total = trackA + trackB;
+
+  let tierTitle = 'Tier I: Emerging Investigator';
+  if (total > 3500) tierTitle = 'Tier V: Laureate of Science & Letters';
+  else if (total > 1800) tierTitle = 'Tier IV: Master Curator & Distinguished Fellow';
+  else if (total > 900) tierTitle = 'Tier III: Principal Investigator';
+  else if (total > 450) tierTitle = 'Tier II: Research Fellow';
+
+  return {
+    scholarName: scholarName || 'Scholar',
+    total,
+    trackA,
+    trackB,
+    illuminations: seedIlluminations,
+    chaptersCount: Math.max(3, bookFolios.length || 18),
+    librarySaves: seedSaves,
+    discussions: seedDiscussions,
+    tierTitle,
+    percentile: total > 2000 ? 'Top 1% of Global Scholars' : (total > 1000 ? 'Top 4% of Global Scholars' : 'Top 12% of Global Scholars')
+  };
+}
+
+function renderGiSvgChart(giData) {
+  const container = document.getElementById('giSvgChartContainer');
+  if (!container) return;
+
+  const trackA = giData.trackA;
+  const trackB = giData.trackB;
+
+  const months = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+  const factorsA = [0.28, 0.42, 0.55, 0.68, 0.79, 0.90, 1.0];
+  const factorsB = [0.20, 0.35, 0.50, 0.62, 0.76, 0.88, 1.0];
+
+  const pointsA = factorsA.map(f => Math.round(trackA * f));
+  const pointsB = factorsB.map(f => Math.round(trackB * f));
+
+  const maxVal = Math.max(...pointsA, ...pointsB) * 1.15;
+  const width = 560;
+  const height = 120;
+  const paddingX = 40;
+  const paddingY = 15;
+
+  const stepX = (width - paddingX * 2) / (months.length - 1);
+
+  const coordsA = pointsA.map((val, i) => {
+    const x = paddingX + i * stepX;
+    const y = height - paddingY - (val / maxVal) * (height - paddingY * 2);
+    return { x, y, val };
+  });
+
+  const coordsB = pointsB.map((val, i) => {
+    const x = paddingX + i * stepX;
+    const y = height - paddingY - (val / maxVal) * (height - paddingY * 2);
+    return { x, y, val };
+  });
+
+  const pathA = coordsA.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ');
+  const areaA = `${pathA} L ${coordsA[coordsA.length - 1].x} ${height - paddingY} L ${coordsA[0].x} ${height - paddingY} Z`;
+
+  const pathB = coordsB.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`).join(' ');
+  const areaB = `${pathB} L ${coordsB[coordsB.length - 1].x} ${height - paddingY} L ${coordsB[0].x} ${height - paddingY} Z`;
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height + 25}" preserveAspectRatio="none" style="width:100%; height:100%;">
+      <defs>
+        <linearGradient id="gradTrackA" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0"/>
+        </linearGradient>
+        <linearGradient id="gradTrackB" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="#a78bfa" stop-opacity="0.0"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Horizontal gridlines -->
+      <line x1="${paddingX}" y1="${paddingY}" x2="${width - paddingX}" y2="${paddingY}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3 3"/>
+      <line x1="${paddingX}" y1="${height/2}" x2="${width - paddingX}" y2="${height/2}" stroke="rgba(255,255,255,0.06)" stroke-dasharray="3 3"/>
+      <line x1="${paddingX}" y1="${height - paddingY}" x2="${width - paddingX}" y2="${height - paddingY}" stroke="rgba(255,255,255,0.1)"/>
+
+      <!-- Area fills -->
+      <path d="${areaA}" fill="url(#gradTrackA)"/>
+      <path d="${areaB}" fill="url(#gradTrackB)"/>
+
+      <!-- Lines -->
+      <path d="${pathA}" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${pathB}" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+      <!-- Dots & month labels -->
+      ${coordsA.map((pt, i) => `
+        <circle cx="${pt.x}" cy="${pt.y}" r="3.5" fill="#38bdf8" stroke="#0a0e18" stroke-width="2">
+          <title>${months[i]} Research Impact: ${pt.val} pts</title>
+        </circle>
+        <circle cx="${coordsB[i].x}" cy="${coordsB[i].y}" r="3.5" fill="#a78bfa" stroke="#0a0e18" stroke-width="2">
+          <title>${months[i]} Textbook Impact: ${coordsB[i].val} pts</title>
+        </circle>
+        <text x="${pt.x}" y="${height + 16}" fill="var(--text-muted, #64748b)" font-size="10" text-anchor="middle" font-family="sans-serif">${months[i]}</text>
+      `).join('')}
+    </svg>
+  `;
+}
+
+function openGiAnalyticsModal(scholarName) {
+  const modal = document.getElementById('giAnalyticsModal');
+  if (!modal) return;
+
+  const gi = calculateScholarGiScore(scholarName);
+
+  const nameEl = document.getElementById('giModalScholarName');
+  const avatarEl = document.getElementById('giModalAvatar');
+  const ageEl = document.getElementById('giModalAccountAge');
+  const tierEl = document.getElementById('giModalTierTitle');
+  const totalEl = document.getElementById('giModalTotalScore');
+  const percentileEl = document.getElementById('giModalPercentile');
+  const trackAScore = document.getElementById('giModalTrackAScore');
+  const trackBScore = document.getElementById('giModalTrackBScore');
+  const trackABar = document.getElementById('giModalTrackABar');
+  const trackBBar = document.getElementById('giModalTrackBBar');
+  const illumEl = document.getElementById('giModalIlluminations');
+  const chaptersEl = document.getElementById('giModalChapters');
+  const savesEl = document.getElementById('giModalLibrarySaves');
+  const discEl = document.getElementById('giModalDiscussions');
+
+  if (nameEl) nameEl.textContent = gi.scholarName;
+  if (avatarEl) avatarEl.textContent = getInitials(gi.scholarName);
+  if (ageEl) ageEl.textContent = `⏳ Account Age: ${formatAccountAge(state.currentUser?.createdAt)}`;
+  if (tierEl) tierEl.textContent = gi.tierTitle;
+  if (totalEl) totalEl.textContent = gi.total.toLocaleString();
+  if (percentileEl) percentileEl.textContent = gi.percentile;
+
+  if (trackAScore) trackAScore.textContent = `${gi.trackA.toLocaleString()} pts`;
+  if (trackBScore) trackBScore.textContent = `${gi.trackB.toLocaleString()} pts`;
+
+  const totalTracks = gi.trackA + gi.trackB;
+  const pctA = Math.round((gi.trackA / totalTracks) * 100);
+  const pctB = 100 - pctA;
+  if (trackABar) trackABar.style.width = `${pctA}%`;
+  if (trackBBar) trackBBar.style.width = `${pctB}%`;
+
+  if (illumEl) illumEl.textContent = gi.illuminations.toLocaleString();
+  if (chaptersEl) chaptersEl.textContent = gi.chaptersCount.toLocaleString();
+  if (savesEl) savesEl.textContent = gi.librarySaves.toLocaleString();
+  if (discEl) discEl.textContent = gi.discussions.toLocaleString();
+
+  renderGiSvgChart(gi);
+
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGiAnalyticsModal() {
+  const modal = document.getElementById('giAnalyticsModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 /**
  * Generate HTML string for single Folio card
  */
@@ -777,6 +1073,8 @@ function renderPostCard(post) {
   const isSaved = state.savedPostIds.has(post.id);
   const slideCount = post.slides.length;
   const isBook = Boolean(post.isBookFolio && post.bookMeta);
+  const authorGi = calculateScholarGiScore(post.authors);
+  const accountAgeBadge = formatAccountAge(post.createdAt);
 
   const slidesHTML = post.slides.map((s, idx) => {
     if (idx === 0) {
@@ -907,7 +1205,11 @@ function renderPostCard(post) {
         <div class="author-info">
           <div class="author-avatar ${isBook ? 'book-author-avatar' : ''}">${isBook ? '📖' : getInitials(post.authors)}</div>
           <div class="author-meta">
-            <span class="author-name">${escapeHTML(post.authors)}</span>
+            <div class="author-name-line">
+              <span class="author-name">${escapeHTML(post.authors)}</span>
+              <button type="button" class="author-gi-chip" onclick="openGiAnalyticsModal('${escapeHTML(post.authors)}')" title="Global Impact Score — Tap to inspect impact breakdown">⚡ GI ${authorGi.total.toLocaleString()}</button>
+              <span class="author-age-tag" title="Scholar Account Age">${accountAgeBadge}</span>
+            </div>
             <span class="author-sub">${isBook ? '📖 ' + escapeHTML(post.bookMeta.bookTitle) : formatDate(post.createdAt)}</span>
           </div>
         </div>
@@ -1989,11 +2291,65 @@ function submitComment(postId) {
 /**
  * Folio Studio & Live Card Generator Setup
  */
+/**
+ * Folio Studio & Live Card Generator Setup
+ */
+function switchStudioFormat(format) {
+  state.studioFormat = format;
+  const isBook = format === 'book';
+
+  document.getElementById('formatPaperBtn')?.classList.toggle('active', !isBook);
+  document.getElementById('formatBookBtn')?.classList.toggle('active', isBook);
+
+  const bookGroup = document.getElementById('bookFieldsGroup');
+  const paperArchetypes = document.getElementById('paperArchetypesBar');
+  if (bookGroup) bookGroup.style.display = isBook ? 'block' : 'none';
+  if (paperArchetypes) paperArchetypes.style.display = isBook ? 'none' : 'flex';
+
+  const lblTitle = document.getElementById('lblTitle');
+  const postTitle = document.getElementById('postTitle');
+  const lblSlide1Header = document.getElementById('lblSlide1Header');
+  const lblSlide1Label = document.getElementById('lblSlide1Label');
+  const lblSlide2Label = document.getElementById('lblSlide2Label');
+  const lblSlide3Label = document.getElementById('lblSlide3Label');
+  const lblSlide4Label = document.getElementById('lblSlide4Label');
+  const autofillPrompt = document.getElementById('autofillPromptText');
+  const autofillBtn = document.getElementById('autofillDemoBtn');
+
+  if (isBook) {
+    if (lblTitle) lblTitle.textContent = 'Subtopic Title *';
+    if (postTitle) postTitle.placeholder = 'e.g. Alterations in Domain Architecture';
+    if (lblSlide1Header) lblSlide1Header.textContent = 'Slide 1: Core Principle / Front Insight';
+    if (lblSlide1Label) lblSlide1Label.textContent = 'Core Concept & Hook *';
+    if (lblSlide2Label) lblSlide2Label.textContent = 'Slide 2: Excerpt & Mechanism Breakdown';
+    if (lblSlide3Label) lblSlide3Label.textContent = 'Slide 3: Concrete Analogy & Visual Figures (e.g. Train-Cars Analogy)';
+    if (lblSlide4Label) lblSlide4Label.textContent = 'Slide 4: Broader Impact & Evolutionary Significance';
+    if (autofillPrompt) autofillPrompt.textContent = 'Need textbook sample?';
+    if (autofillBtn) autofillBtn.textContent = 'Load Genetics: Domain Architecture (Train Analogy)';
+  } else {
+    if (lblTitle) lblTitle.textContent = 'Paper / Treatise Title *';
+    if (postTitle) postTitle.placeholder = 'e.g. Accurate structure prediction of biomolecular interactions with AlphaFold 3';
+    if (lblSlide1Header) lblSlide1Header.textContent = 'Slide 1: Front Visual Hook (The Core Claim)';
+    if (lblSlide1Label) lblSlide1Label.textContent = 'The 1-Sentence Breakthrough Claim *';
+    if (lblSlide2Label) lblSlide2Label.textContent = 'Slide 2: Methodology & Experimental Framework';
+    if (lblSlide3Label) lblSlide3Label.textContent = 'Slide 3: Quantitative Findings & Benchmarks';
+    if (lblSlide4Label) lblSlide4Label.textContent = 'Slide 4: Critical Frontier & Open Questions';
+    if (autofillPrompt) autofillPrompt.textContent = 'Need sample data?';
+    if (autofillBtn) autofillBtn.textContent = 'Load LK-99 Superconductivity Dissection';
+  }
+
+  updateCreatorLivePreview();
+}
+
 function initCreatorStudio() {
-  const inputs = ['postTitle', 'postAuthors', 'postField', 'postDoi', 'postHook', 'postMethod', 'postResults', 'postCritique'];
+  const inputs = [
+    'postTitle', 'postAuthors', 'postField', 'postDoi', 'postHook', 'postMethod', 'postResults', 'postCritique',
+    'bookTitleInput', 'bookEditionInput', 'bookChapterInput', 'bookChapterTitleInput', 'bookCollectionInput', 'bookSequenceInput', 'bookAttributionSelect'
+  ];
   inputs.forEach(id => {
     const el = document.getElementById(id);
     el?.addEventListener('input', () => updateCreatorLivePreview());
+    el?.addEventListener('change', () => updateCreatorLivePreview());
   });
 
   // Archetype Template Selector
@@ -2028,16 +2384,48 @@ function initCreatorStudio() {
     updateCreatorLivePreview();
   });
 
-  // Autofill Demo Paper
+  // Autofill Demo Paper or Book Chapter
   document.getElementById('autofillDemoBtn')?.addEventListener('click', () => {
-    document.getElementById('postTitle').value = 'Room-temperature and ambient-pressure superconductivity in modified lead apatite (LK-99) analysis';
-    document.getElementById('postAuthors').value = 'Lee, Kim, Kwon (Condensed Matter Physics Lab)';
-    document.getElementById('postField').value = 'Quantum & Physics';
-    document.getElementById('postDoi').value = 'https://arxiv.org/abs/2307.12008';
-    document.getElementById('postHook').value = 'Independent replication efforts demonstrate that Cu2S impurities, rather than bulk superconductivity, account for the sharp electrical resistivity drop and magnetic levitation.';
-    document.getElementById('postMethod').value = 'Synthesized lead-apatite crystals using high-vacuum solid-state sintering; performed X-ray diffraction, four-probe resistivity measurements, and SQUID magnetometry across 100K-400K.';
-    document.getElementById('postResults').value = 'Resistivity drop at 104°C corresponds precisely to the known first-order structural phase transition of copper sulfide (Cu2S). No Meissner effect or zero resistance verified.';
-    document.getElementById('postCritique').value = 'Emphasizes the vital necessity of rapid open-science replications and public code/material sharing to resolve controversial high-stakes physical claims.';
+    if (state.studioFormat === 'book') {
+      const bookTitle = document.getElementById('bookTitleInput');
+      const bookEdition = document.getElementById('bookEditionInput');
+      const bookChapter = document.getElementById('bookChapterInput');
+      const bookChapterTitle = document.getElementById('bookChapterTitleInput');
+      const bookCollection = document.getElementById('bookCollectionInput');
+      const bookSequence = document.getElementById('bookSequenceInput');
+      const postTitle = document.getElementById('postTitle');
+      const postAuthors = document.getElementById('postAuthors');
+      const postField = document.getElementById('postField');
+      const postDoi = document.getElementById('postDoi');
+      const postHook = document.getElementById('postHook');
+      const postMethod = document.getElementById('postMethod');
+      const postResults = document.getElementById('postResults');
+      const postCritique = document.getElementById('postCritique');
+
+      if (bookTitle) bookTitle.value = 'Genetics: From Genes to Genomes';
+      if (bookEdition) bookEdition.value = '7th Edition';
+      if (bookChapter) bookChapter.value = 'Chapter 11.2';
+      if (bookChapterTitle) bookChapterTitle.value = 'Genome Architecture and Evolution';
+      if (bookCollection) bookCollection.value = 'The Arrangement of Genes in the Genome Is Not Uniform';
+      if (bookSequence) bookSequence.value = '3';
+      if (postTitle) postTitle.value = 'Alterations in Domain Architecture';
+      if (postAuthors) postAuthors.value = 'Hartwell, Goldberg, Fischer & Hood';
+      if (postField) postField.value = 'Biotech & Genetics';
+      if (postDoi) postDoi.value = 'https://www.mheducation.com/highered/product/genetics-genes-genomes-hartwell-goldberg/M9781260240894.html';
+      if (postHook) postHook.value = 'Genome annotation has revealed that exons often encode discrete protein domains, each of which is a linear sequence of amino acids that folds up in three-dimensional space so as to act as a single functional unit.';
+      if (postMethod) postMethod.value = 'Genes with multiple exons often encode proteins with multiple domains analogous to the cars of a train. Each train is composed of many different cars (engine, flat car, dining car, caboose) fulfilling a discrete function.';
+      if (postResults) postResults.value = 'Different trains carry different combinations of cars and fulfill different purposes. Similarly, many genes are composed of multiple exons encoding distinct domains, enabling modular protein evolution and domain shuffling.';
+      if (postCritique) postCritique.value = 'Rearrangements that shuffle exons into new combinations permit rapid evolutionary innovation, allowing complex multicellular genomes to adapt without creating new protein folds from scratch.';
+    } else {
+      document.getElementById('postTitle').value = 'Room-temperature and ambient-pressure superconductivity in modified lead apatite (LK-99) analysis';
+      document.getElementById('postAuthors').value = 'Lee, Kim, Kwon (Condensed Matter Physics Lab)';
+      document.getElementById('postField').value = 'Quantum Computing';
+      document.getElementById('postDoi').value = 'https://arxiv.org/abs/2307.12008';
+      document.getElementById('postHook').value = 'Independent replication efforts demonstrate that Cu2S impurities, rather than bulk superconductivity, account for the sharp electrical resistivity drop and magnetic levitation.';
+      document.getElementById('postMethod').value = 'Synthesized lead-apatite crystals using high-vacuum solid-state sintering; performed X-ray diffraction, four-probe resistivity measurements, and SQUID magnetometry across 100K-400K.';
+      document.getElementById('postResults').value = 'Resistivity drop at 104°C corresponds precisely to the known first-order structural phase transition of copper sulfide (Cu2S). No Meissner effect or zero resistance verified.';
+      document.getElementById('postCritique').value = 'Emphasizes the vital necessity of rapid open-science replications and public code/material sharing to resolve controversial high-stakes physical claims.';
+    }
     updateCreatorLivePreview();
   });
 
@@ -2051,27 +2439,43 @@ function initCreatorStudio() {
   document.getElementById('publishPostBtn')?.addEventListener('click', async () => {
     const data = getCreatorFormData();
     if (!data.title || !data.hook) {
-      alert('Please provide at least a Paper/Treatise Title and the 1-Sentence Core Thesis.');
+      alert(data.isBook ? 'Please provide at least a Subtopic Title and the Core Concept.' : 'Please provide at least a Paper/Treatise Title and the 1-Sentence Core Thesis.');
       return;
     }
 
+    const isBook = Boolean(data.isBook);
     const newPost = {
-      id: 'folio-' + Date.now(),
+      id: (isBook ? 'book-folio-' : 'folio-') + Date.now(),
       title: data.title,
-      authors: data.authors || 'Independent Scholar',
+      authors: data.authors || (state.currentUser ? state.currentUser.name : (isBook ? 'Curated Textbook Scholar' : 'Independent Scholar')),
       field: data.field,
       doi: data.doi,
       theme: state.creator.selectedTheme,
       likes: 1,
       createdAt: new Date().toISOString(),
       comments: [],
+      isBookFolio: isBook,
       slides: [
-        { type: 'hero', hook: data.hook },
-        { type: 'method', title: 'Methodology & Specs', content: data.method || 'Standard experimental protocols applied.' },
-        { type: 'results', title: 'Quantitative Findings', content: data.results || 'Data highlights significant effects across primary parameters.' },
-        { type: 'critique', title: 'Critical Frontier', content: data.critique || 'Future cross-validation studies needed.' }
+        { type: isBook ? 'book' : 'hero', hook: data.hook },
+        { type: isBook ? 'book' : 'method', title: isBook ? 'Concept & Excerpt Breakdown' : 'Methodology & Specs', content: data.method || 'Core pedagogical synthesis and foundational mechanics.' },
+        { type: isBook ? 'book' : 'results', title: isBook ? 'Mechanisms, Analogies & Evidence' : 'Quantitative Findings', content: data.results || 'Analogies and concrete illustrations.' },
+        { type: isBook ? 'book' : 'critique', title: isBook ? 'Evolutionary Context & Reflections' : 'Critical Frontier', content: data.critique || 'Significance in modern scientific understanding.' }
       ]
     };
+
+    if (isBook) {
+      newPost.bookMeta = {
+        bookTitle: data.bookTitle || 'Curated Textbook Treatise',
+        edition: data.bookEdition || '1st Edition',
+        chapter: data.bookChapter || 'Chapter 1',
+        chapterTitle: data.bookChapterTitle || '',
+        collectionTitle: data.bookCollection || 'Chapter Topics',
+        sequence: data.bookSequence || 1,
+        attribution: data.bookAttribution || 'Curated Classic Textbook Knowledge'
+      };
+      if (!Array.isArray(state.bookPosts)) state.bookPosts = [];
+      state.bookPosts.unshift(newPost);
+    }
 
     await SupabaseBridge.createPost(newPost);
     state.posts.unshift(newPost);
@@ -2080,6 +2484,7 @@ function initCreatorStudio() {
     // Close modal & reset
     document.getElementById('createPostModal').style.display = 'none';
     document.getElementById('paperForm').reset();
+    showToast(isBook ? '📖 Book Chapter Folio Published & Added to Feed!' : '📄 Breakthrough Research Folio Published!', 'success');
     renderFeed();
   });
 
@@ -2098,29 +2503,39 @@ function applyFolioArchetype(key) {
   const slide4Label = document.getElementById('lblSlide4Label');
   const slide4Input = document.getElementById('postCritique');
 
-  if (titleInput) titleInput.placeholder = arch.titlePlaceholder;
-  if (slide1Label) slide1Label.textContent = arch.slide1Label;
-  if (slide1Input) slide1Input.placeholder = arch.slide1Placeholder;
-  if (slide2Label) slide2Label.textContent = arch.slide2Label;
-  if (slide2Input) slide2Input.placeholder = arch.slide2Placeholder;
-  if (slide3Label) slide3Label.textContent = arch.slide3Label;
-  if (slide3Input) slide3Input.placeholder = arch.slide3Placeholder;
-  if (slide4Label) slide4Label.textContent = arch.slide4Label;
-  if (slide4Input) slide4Input.placeholder = arch.slide4Placeholder;
+  if (titleInput && state.studioFormat !== 'book') titleInput.placeholder = arch.titlePlaceholder;
+  if (slide1Label && state.studioFormat !== 'book') slide1Label.textContent = arch.slide1Label;
+  if (slide1Input && state.studioFormat !== 'book') slide1Input.placeholder = arch.slide1Placeholder;
+  if (slide2Label && state.studioFormat !== 'book') slide2Label.textContent = arch.slide2Label;
+  if (slide2Input && state.studioFormat !== 'book') slide2Input.placeholder = arch.slide2Placeholder;
+  if (slide3Label && state.studioFormat !== 'book') slide3Label.textContent = arch.slide3Label;
+  if (slide3Input && state.studioFormat !== 'book') slide3Input.placeholder = arch.slide3Placeholder;
+  if (slide4Label && state.studioFormat !== 'book') slide4Label.textContent = arch.slide4Label;
+  if (slide4Input && state.studioFormat !== 'book') slide4Input.placeholder = arch.slide4Placeholder;
 
   updateCreatorLivePreview();
 }
 
 function getCreatorFormData() {
+  const isBook = state.studioFormat === 'book';
   return {
+    isBook,
     title: document.getElementById('postTitle')?.value.trim() || '',
     authors: document.getElementById('postAuthors')?.value.trim() || '',
-    field: document.getElementById('postField')?.value || 'AI & Machine Learning',
+    field: document.getElementById('postField')?.value || 'Biotech & Genetics',
     doi: document.getElementById('postDoi')?.value.trim() || '',
     hook: document.getElementById('postHook')?.value.trim() || '',
     method: document.getElementById('postMethod')?.value.trim() || '',
     results: document.getElementById('postResults')?.value.trim() || '',
-    critique: document.getElementById('postCritique')?.value.trim() || ''
+    critique: document.getElementById('postCritique')?.value.trim() || '',
+    // Book Metadata
+    bookTitle: document.getElementById('bookTitleInput')?.value.trim() || '',
+    bookEdition: document.getElementById('bookEditionInput')?.value.trim() || '',
+    bookChapter: document.getElementById('bookChapterInput')?.value.trim() || '',
+    bookChapterTitle: document.getElementById('bookChapterTitleInput')?.value.trim() || '',
+    bookCollection: document.getElementById('bookCollectionInput')?.value.trim() || '',
+    bookSequence: parseInt(document.getElementById('bookSequenceInput')?.value, 10) || 1,
+    bookAttribution: document.getElementById('bookAttributionSelect')?.value || 'Curated Classic Textbook Knowledge'
   };
 }
 
@@ -2132,7 +2547,7 @@ function updateCreatorLivePreview() {
   if (!stage) return;
 
   const currentTheme = state.creator.selectedTheme;
-  stage.className = `live-card theme-${currentTheme}`;
+  stage.className = `live-card theme-${currentTheme} ${data.isBook ? 'book-card-theme' : ''}`;
   stage.innerHTML = CardGenerator.renderPreviewHTML(data, state.creator.activeSlideIndex, currentTheme);
 
   if (counter) {
@@ -2769,7 +3184,11 @@ function renderProfileView() {
 
           <!-- Name Place: Guest Scholar -->
           <h1 class="ghost-profile-name">Guest Scholar</h1>
-          <div class="ghost-profile-handle">@scholar.guest · Stealth Reading Mode</div>
+          <div class="ghost-profile-handle" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+            <span>@scholar.guest · Stealth Reading Mode</span>
+            <span class="account-age-pill" title="Scholar Tenure">⏳ New Scholar</span>
+            <button type="button" class="author-gi-chip" onclick="openGiAnalyticsModal('Guest Scholar')">⚡ GI 350 · Starter ▾</button>
+          </div>
 
           <p class="ghost-profile-bio">You are currently exploring Folerio in anonymous guest mode. Sign in or register to publish research Folios, join academic discourse, and sync your library across devices.</p>
 
@@ -2819,6 +3238,10 @@ function renderProfileView() {
 
           <!-- Social / Activity Stats Row -->
           <div class="scholar-stats-row">
+            <div class="stat-col" onclick="openGiAnalyticsModal('Guest Scholar')" style="cursor:pointer;" title="Global Impact Score">
+              <span class="stat-item-num" style="color:var(--accent-cyan);">⚡ 350</span>
+              <span class="stat-item-label">GI Score</span>
+            </div>
             <div class="stat-col"><span class="stat-item-num">0</span><span class="stat-item-label">Published</span></div>
             <div class="stat-col"><span class="stat-item-num">${state.colleagues.size}</span><span class="stat-item-label">Colleagues</span></div>
             <div class="stat-col"><span class="stat-item-num">${state.trackedTopics.size}</span><span class="stat-item-label">Tracked Fields</span></div>
@@ -2832,6 +3255,8 @@ function renderProfileView() {
     const u = state.currentUser;
     const myFolios = state.posts.filter(p => (p.authors || '').includes(u.name) || p.id.startsWith('user-'));
     const savedFolios = state.posts.filter(p => state.savedPostIds.has(p.id));
+    const myGi = calculateScholarGiScore(u.name);
+    const myAge = formatAccountAge(u.createdAt || u.created_at || '2025-01-01');
 
     let tabContentHTML = '';
     if (state.profileActiveTab === 'folios') {
@@ -2870,9 +3295,11 @@ function renderProfileView() {
               ${u.avatarUrl ? `<img src="${escapeHTML(u.avatarUrl)}" alt="${escapeHTML(u.name)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : escapeHTML(u.avatarInitials || getInitials(u.name))}
             </div>
             <div class="scholar-meta-col">
-              <div class="scholar-name-row">
-                <h2 class="scholar-name-h2">${escapeHTML(u.name)}</h2>
+              <div class="scholar-name-row" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                <h2 class="scholar-name-h2" style="margin:0;">${escapeHTML(u.name)}</h2>
                 <span class="verified-scholar-chip">✓ Verified Scholar</span>
+                <span class="account-age-pill" title="Scholar Tenure">⏳ ${myAge}</span>
+                <button type="button" class="gi-badge-btn" onclick="openGiAnalyticsModal('${escapeHTML(u.name)}')">⚡ GI ${myGi.total.toLocaleString()} · ${escapeHTML(myGi.tierTitle.split(':')[0])} ▾</button>
               </div>
               <div class="scholar-affiliation">${escapeHTML(u.institution || 'Research Scholar')}</div>
               <div class="scholar-lab">${escapeHTML(u.department || 'Independent Investigator')}</div>
@@ -2889,8 +3316,12 @@ function renderProfileView() {
             ${u.bio ? `<div class="credential-row" style="flex-direction:column; gap:2px;"><span class="credential-label">Research Focus:</span><span class="credential-value" style="color:var(--text-secondary);">${escapeHTML(u.bio)}</span></div>` : ''}
           </div>
 
-          <!-- Instagram Stats Row -->
+          <!-- Scholar Stats Row with GI Score -->
           <div class="scholar-stats-row">
+            <div class="stat-col" onclick="openGiAnalyticsModal('${escapeHTML(u.name)}')" style="cursor:pointer;" title="Click for GI Score Analytics">
+              <span class="stat-item-num" style="color:var(--accent-cyan);">⚡ ${myGi.total.toLocaleString()}</span>
+              <span class="stat-item-label">GI Score</span>
+            </div>
             <div class="stat-col"><span class="stat-item-num">${myFolios.length}</span><span class="stat-item-label">Published</span></div>
             <div class="stat-col"><span class="stat-item-num">${state.colleagues.size}</span><span class="stat-item-label">Colleagues</span></div>
             <div class="stat-col"><span class="stat-item-num">${state.trackedTopics.size}</span><span class="stat-item-label">Tracked Fields</span></div>
@@ -3000,7 +3431,10 @@ function updateAuthUI() {
       }
     }
     if (sidebarProfileName) sidebarProfileName.textContent = state.currentUser.name;
-    if (sidebarProfileCaption) sidebarProfileCaption.textContent = state.currentUser.title || 'Verified Scholar';
+    if (sidebarProfileCaption) {
+      const myGi = calculateScholarGiScore(state.currentUser.name);
+      sidebarProfileCaption.textContent = `⚡ GI ${myGi.total.toLocaleString()} · ${state.currentUser.title || 'Verified Scholar'}`;
+    }
   } else {
     if (avatarWrap) {
       avatarWrap.innerHTML = `
@@ -3016,7 +3450,7 @@ function updateAuthUI() {
     if (label) label.textContent = 'Account';
     if (sidebarAvatarText) sidebarAvatarText.textContent = '🎓';
     if (sidebarProfileName) sidebarProfileName.textContent = 'Guest Scholar';
-    if (sidebarProfileCaption) sidebarProfileCaption.textContent = 'Tap to Sign In / Join';
+    if (sidebarProfileCaption) sidebarProfileCaption.textContent = '⚡ GI 350 · Tap to Sign In';
   }
 }
 
