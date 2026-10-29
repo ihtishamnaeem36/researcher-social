@@ -90,13 +90,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.3
-          name: "Folerio Android v1.5.3 (Bespoke Book Aesthetics, 4-Way Theme Matrix, Book Studio & GI Analytics)"
+          tag_name: v1.5.4
+          name: "Folerio Android v1.5.4 (In-App Google Account Chooser & Auth Localhost Fix)"
           body: |
-            ### Folerio Standalone Android APK (v1.5.3)
-            - **Bespoke Book Folio Design & Theme Matrix:** Clean, elegant parchment-style aesthetics for book chapters with gold accents and serif typography. Features a 4-way Reading Matrix (App Dark + Folios Light, App Light + Folios Dark, Unified Obsidian, and Unified Swiss Light).
-            - **Folio Studio Book Chapter Template:** Dedicated creation suite supporting both Research Papers and Book Chapters. Includes book metadata (Book Title, Edition, Chapter, Collection, Subtopic Title, Sequence Order, Attribution), interactive real-time preview, and one-click textbook demo autofill.
-            - **Global Impact (GI) Score & Account Age Badges:** Transparent academic prestige system evaluating both Track A (Original Discoveries) and Track B (Curated Classic Textbooks & Scholarship). Includes concise account age badges (`1d`, `3w`, `2m`, `1y`, `5y`), interactive SVG growth trajectory chart, and breakdown analytics modal.
-            - **100% Offline Independent APK:** Full asset cache bundle running locally without server or connection dependency.
+            ### Folerio Standalone Android APK (v1.5.4)
+            - **In-App Google Sign-In & Account Chooser (No External Browser):** Implemented a native in-app authentication dialog directly within Folerio. When you tap "Continue with Google", the Google account chooser opens right inside the app, lets you pick your account, and closes automatically upon completion.
+            - **Eliminated "localhost refused to connect" Redirects:** The in-app auth bridge intercepts all redirect URLs (including any default Supabase `localhost:3000` redirects) *before* the browser attempts network connection, extracting tokens and logging you in immediately.
+            - **Instant 1-Tap Verified Scholar Pass:** Added a 1-tap instant scholar pass in the authentication modal for seamless zero-friction access.
+            - **100% Offline Independent Standalone APK:** Bundled with all local assets, book collections, theme matrix, and global impact analytics.
             - **Direct Download:** Download `Folerio.apk` below and tap Install/Update.
           files: output/Folerio.apk

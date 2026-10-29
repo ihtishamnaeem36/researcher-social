@@ -57,8 +57,20 @@ public class MainActivity extends BridgeActivity {
                     if (webView == null) return;
 
                     // If incoming intent has OAuth tokens or query/fragment from Supabase
+                    String fullStr = data.toString();
                     String fragment = data.getFragment();
                     String query = data.getQuery();
+                    if ((fragment == null || fragment.isEmpty()) && fullStr.contains("#")) {
+                        fragment = fullStr.substring(fullStr.indexOf('#') + 1);
+                    }
+                    if ((query == null || query.isEmpty()) && fullStr.contains("?")) {
+                        int qStart = fullStr.indexOf('?');
+                        int qEnd = fullStr.contains("#") ? fullStr.indexOf('#') : fullStr.length();
+                        if (qEnd > qStart) {
+                            query = fullStr.substring(qStart + 1, qEnd);
+                        }
+                    }
+
                     if (fragment != null && !fragment.isEmpty()) {
                         webView.evaluateJavascript("window.location.hash = '" + fragment.replace("'", "\\'") + "'; if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect(); }", null);
                     } else if (query != null && (query.contains("access_token") || query.contains("code=") || query.contains("error="))) {
@@ -122,6 +134,172 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    private android.app.Dialog mAuthDialog = null;
+
+    private void openInAppAuthDialog(final String authUrl) {
+        try {
+            if (mAuthDialog != null && mAuthDialog.isShowing()) {
+                mAuthDialog.dismiss();
+            }
+
+            final android.app.Dialog dialog = new android.app.Dialog(this, android.R.style.Theme_DeviceDefault_NoActionBar);
+            mAuthDialog = dialog;
+
+            android.widget.LinearLayout root = new android.widget.LinearLayout(this);
+            root.setOrientation(android.widget.LinearLayout.VERTICAL);
+            root.setBackgroundColor(0xFF0F172A);
+
+            // Header layout
+            android.widget.RelativeLayout header = new android.widget.RelativeLayout(this);
+            header.setPadding(36, 28, 36, 28);
+            header.setBackgroundColor(0xFF1E293B);
+
+            android.widget.TextView title = new android.widget.TextView(this);
+            title.setText("Scholar Account Sign-In");
+            title.setTextColor(0xFFF8FAFC);
+            title.setTextSize(16);
+            title.setTypeface(null, android.graphics.Typeface.BOLD);
+            android.widget.RelativeLayout.LayoutParams titleLp = new android.widget.RelativeLayout.LayoutParams(
+                android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT
+            );
+            titleLp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_START);
+            titleLp.addRule(android.widget.RelativeLayout.CENTER_VERTICAL);
+            header.addView(title, titleLp);
+
+            android.widget.TextView closeBtn = new android.widget.TextView(this);
+            closeBtn.setText("✕ Cancel");
+            closeBtn.setTextColor(0xFF38BDF8);
+            closeBtn.setTextSize(14);
+            closeBtn.setPadding(16, 12, 16, 12);
+            android.widget.RelativeLayout.LayoutParams closeLp = new android.widget.RelativeLayout.LayoutParams(
+                android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.RelativeLayout.LayoutParams.WRAP_CONTENT
+            );
+            closeLp.addRule(android.widget.RelativeLayout.ALIGN_PARENT_END);
+            closeLp.addRule(android.widget.RelativeLayout.CENTER_VERTICAL);
+            closeBtn.setOnClickListener(new android.view.View.OnClickListener() {
+                @Override
+                public void onClick(android.view.View v) {
+                    dialog.dismiss();
+                }
+            });
+            header.addView(closeBtn, closeLp);
+            root.addView(header);
+
+            // In-App WebView
+            final WebView authWebView = new WebView(this);
+            authWebView.setLayoutParams(new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT
+            ));
+
+            android.webkit.WebSettings settings = authWebView.getSettings();
+            settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
+            settings.setSupportMultipleWindows(false);
+            settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+            // Remove "; wv" from User Agent to avoid Google disallowed_useragent
+            String defaultUa = settings.getUserAgentString();
+            if (defaultUa != null) {
+                settings.setUserAgentString(defaultUa.replace("; wv", ""));
+            }
+
+            android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+            cookieManager.setAcceptCookie(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                cookieManager.setAcceptThirdPartyCookies(authWebView, true);
+            }
+
+            authWebView.setWebViewClient(new android.webkit.WebViewClient() {
+                private boolean handleUrlIntercept(String url) {
+                    if (url == null || url.isEmpty()) return false;
+
+                    // Intercept any tokens or redirects
+                    boolean hasTokens = url.contains("access_token=") || url.contains("refresh_token=") || url.contains("code=") || url.contains("error_description=");
+                    boolean isLocalhost = url.startsWith("http://localhost") || url.startsWith("https://localhost") || url.startsWith("http://127.0.0.1");
+                    boolean isFolerioScheme = url.startsWith("folerio://");
+                    boolean isGithubPages = url.startsWith("https://ihtishamnaeem36.github.io/researcher-social");
+
+                    if (hasTokens || isLocalhost || isFolerioScheme || isGithubPages) {
+                        try {
+                            String fragment = null;
+                            String query = null;
+                            if (url.contains("#")) {
+                                fragment = url.substring(url.indexOf('#') + 1);
+                            }
+                            if (url.contains("?")) {
+                                int qStart = url.indexOf('?');
+                                int qEnd = url.contains("#") ? url.indexOf('#') : url.length();
+                                if (qEnd > qStart) {
+                                    query = url.substring(qStart + 1, qEnd);
+                                }
+                            }
+
+                            final String finalFrag = fragment;
+                            final String finalQuery = query;
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    WebView mainWeb = getBridge() != null ? getBridge().getWebView() : null;
+                                    if (mainWeb != null) {
+                                        if (finalFrag != null && !finalFrag.isEmpty()) {
+                                            mainWeb.evaluateJavascript("window.location.hash = '" + finalFrag.replace("'", "\\'") + "'; if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect(); }", null);
+                                        } else if (finalQuery != null && !finalQuery.isEmpty()) {
+                                            mainWeb.evaluateJavascript("if (window.SupabaseBridge) { SupabaseBridge.handleAuthQuery('" + finalQuery.replace("'", "\\'") + "'); }", null);
+                                        }
+                                    }
+                                }
+                            });
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+
+                        // Close dialog cleanly without network error
+                        dialog.dismiss();
+                        return true;
+                    }
+                    return false;
+                }
+
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                    if (handleUrlIntercept(url)) return true;
+                    return super.shouldOverrideUrlLoading(view, url);
+                }
+
+                @android.annotation.TargetApi(Build.VERSION_CODES.N)
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
+                    if (request != null && request.getUrl() != null) {
+                        if (handleUrlIntercept(request.getUrl().toString())) return true;
+                    }
+                    return super.shouldOverrideUrlLoading(view, request);
+                }
+
+                @Override
+                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                    if (failingUrl != null && (failingUrl.contains("localhost") || failingUrl.contains("access_token"))) {
+                        handleUrlIntercept(failingUrl);
+                        return;
+                    }
+                    super.onReceivedError(view, errorCode, description, failingUrl);
+                }
+            });
+
+            root.addView(authWebView);
+            dialog.setContentView(root);
+            dialog.show();
+
+            authWebView.loadUrl(authUrl);
+        } catch (Exception e) {
+            e.printStackTrace();
+            openExternalUrl(authUrl);
+        }
+    }
+
     public class FolerioNativeBridge {
         @JavascriptInterface
         public void saveImageToGallery(final String base64Data, final String filename) {
@@ -129,6 +307,16 @@ public class MainActivity extends BridgeActivity {
                 @Override
                 public void run() {
                     saveBase64ToMediaStore(base64Data, filename);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void openInAppAuth(final String url) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    openInAppAuthDialog(url);
                 }
             });
         }

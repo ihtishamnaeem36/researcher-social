@@ -97,10 +97,18 @@ const SupabaseBridge = {
     const redirectUrl = this.getCanonicalRedirectUrl();
     const authUrl = `${this.config.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`;
 
-    if (window.FolerioNative && typeof window.FolerioNative.openExternalUrl === 'function') {
+    if (window.FolerioNative && typeof window.FolerioNative.openInAppAuth === 'function') {
+      window.FolerioNative.openInAppAuth(authUrl);
+    } else if (window.FolerioNative && typeof window.FolerioNative.openExternalUrl === 'function') {
       window.FolerioNative.openExternalUrl(authUrl);
     } else {
-      window.location.href = authUrl;
+      const w = 500, h = 650;
+      const left = (window.screen.width - w) / 2;
+      const top = (window.screen.height - h) / 2;
+      const popup = window.open(authUrl, 'FolerioGoogleAuth', `width=${w},height=${h},top=${top},left=${left},status=no,resizable=yes`);
+      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        window.location.href = authUrl;
+      }
     }
   },
 
@@ -312,7 +320,18 @@ const SupabaseBridge = {
           session.user = user;
           this.saveSession(session);
           const profile = await this.syncProfile(user);
-          return this.formatScholarUser(user, profile);
+          const formatted = this.formatScholarUser(user, profile);
+
+          if (typeof window.signInUser === 'function') {
+            window.signInUser(formatted);
+          } else if (typeof signInUser === 'function') {
+            signInUser(formatted);
+          }
+          if (typeof window.showToast === 'function') {
+            window.showToast(`Welcome to Folerio, ${formatted.name}! 🎓`);
+          }
+
+          return formatted;
         }
       }
     } catch (err) {
@@ -355,7 +374,18 @@ const SupabaseBridge = {
             session.user = user;
             this.saveSession(session);
             const profile = await this.syncProfile(user);
-            return this.formatScholarUser(user, profile);
+            const formatted = this.formatScholarUser(user, profile);
+
+            if (typeof window.signInUser === 'function') {
+              window.signInUser(formatted);
+            } else if (typeof signInUser === 'function') {
+              signInUser(formatted);
+            }
+            if (typeof window.showToast === 'function') {
+              window.showToast(`Welcome to Folerio, ${formatted.name}! 🎓`);
+            }
+
+            return formatted;
           }
         }
       } catch (e) {

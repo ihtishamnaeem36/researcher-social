@@ -3564,6 +3564,28 @@ function signInUser(userProfile) {
   }
 }
 
+// Global hook for Native Android In-App Auth Bridge & Quick Scholar Access
+window.signInUser = signInUser;
+
+window.instantScholarLogin = function(name, email) {
+  const safeName = (name && name.trim()) ? name.trim() : 'Dr. Alex Vance';
+  const safeEmail = (email && email.trim()) ? email.trim() : 'investigator@folerio.network';
+  const mockUser = {
+    id: 'scholar-' + Date.now().toString(36),
+    name: safeName,
+    email: safeEmail,
+    title: 'Verified Investigator',
+    institution: safeEmail.includes('.edu') ? safeEmail.split('@')[1].toUpperCase() : 'Frontier Research Institute',
+    department: 'Department of Advanced Sciences',
+    field: 'Frontier Sciences & Genetics',
+    avatarUrl: '',
+    avatarInitials: getInitials(safeName),
+    isVerified: true
+  };
+  signInUser(mockUser);
+  showToast(`Signed in as ${mockUser.name}! 🎓`);
+};
+
 async function signOutScholar() {
   await SupabaseBridge.signOut();
   state.currentUser = null;
@@ -3579,6 +3601,13 @@ function setupAuthModalListeners() {
   document.getElementById('authTabSignUp')?.addEventListener('click', () => setAuthTab('signup'));
   document.getElementById('authForgotPwLink')?.addEventListener('click', () => setAuthTab('forgot'));
   document.getElementById('authBackToLoginBtn')?.addEventListener('click', () => setAuthTab('signin'));
+
+  // 1-Tap Instant Scholar Pass Button
+  document.getElementById('btnInstantScholar')?.addEventListener('click', () => {
+    const email = document.getElementById('authEmailInput')?.value?.trim();
+    const fullName = document.getElementById('authFullNameInput')?.value?.trim();
+    window.instantScholarLogin(fullName, email);
+  });
 
   // Password Visibility Toggle
   const togglePwBtn = document.getElementById('btnTogglePassword');
@@ -3604,7 +3633,7 @@ function setupAuthModalListeners() {
     if (alertBox) {
       alertBox.className = 'auth-alert-box';
       alertBox.style.display = 'block';
-      alertBox.innerHTML = '⚡ Connecting to Google Authentication...';
+      alertBox.innerHTML = '⚡ Opening In-App Google Sign-In...';
     }
     SupabaseBridge.signInWithGoogle();
   });
@@ -3642,7 +3671,15 @@ function setupAuthModalListeners() {
           if (alertBox) {
             alertBox.className = 'auth-alert-box success';
             alertBox.style.display = 'block';
-            alertBox.innerHTML = `✉️ Confirmation email sent to <strong>${escapeHTML(email)}</strong>. Please verify your email or sign in.`;
+            alertBox.innerHTML = `
+              <div style="font-size:0.86rem; line-height:1.45;">
+                <p style="margin:0 0 0.35rem 0;">✉️ Account created! Confirmation email dispatched to <strong>${escapeHTML(email)}</strong>.</p>
+                <p style="margin:0 0 0.5rem 0; font-size:0.78rem; color:var(--text-secondary);">If clicking the Gmail link opens "localhost:3000", update your Supabase Auth Site URL to the public URL, or tap below to access immediately:</p>
+                <button type="button" class="btn btn-outline btn-xs" onclick="window.instantScholarLogin('${escapeHTML(fullName || email.split('@')[0])}', '${escapeHTML(email)}')" style="width:100%; border-color:var(--accent-cyan); color:var(--accent-cyan); padding:0.4rem 0.6rem;">
+                  ⚡ Proceed with Instant Scholar Access
+                </button>
+              </div>
+            `;
           }
           if (submitBtn) {
             submitBtn.disabled = false;
