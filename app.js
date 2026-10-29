@@ -184,9 +184,10 @@ const FOLIO_ARCHETYPES = {
 const state = {
   posts: [],
   primerPosts: [],
+  bookPosts: [],
   interleavedPosts: null,
   exploreFaculty: 'all',
-  feedMode: 'frontier', // 'frontier' | 'primer'
+  feedMode: 'frontier', // 'frontier' | 'primer' | 'books'
   currentTopic: 'all',
   searchQuery: '',
   showSavedOnly: false,
@@ -238,6 +239,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('OAuth redirect check notice:', authErr);
   }
 
+  // Handle /oauth/consent authorization path if visited
+  if (window.location.pathname.includes('/oauth/consent') || window.location.search.includes('client_id=')) {
+    renderOAuthConsentModal();
+  }
+
   updateSupabaseStatusIndicator();
   updateAuthUI();
   await loadPosts();
@@ -249,6 +255,35 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPullToRefreshAndTabRefresh();
   initExploreSearch();
 });
+
+function renderOAuthConsentModal() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const clientId = urlParams.get('client_id') || 'Third-Party Scholarly Tool';
+  const scope = urlParams.get('scope') || 'Read Folio Library & Profile';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.display = 'flex';
+  overlay.style.zIndex = '99999';
+  overlay.innerHTML = `
+    <div class="modal-card" style="max-width:440px; padding:1.5rem; text-align:center;">
+      <div style="font-size:2.5rem; margin-bottom:0.5rem;">🔐</div>
+      <h2 style="font-size:1.25rem; font-weight:800; margin-bottom:0.4rem;">Folerio OAuth Authorization</h2>
+      <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.45; margin-bottom:1.25rem;">
+        An external application is requesting authorization to connect with your Folerio scientific identity:
+      </p>
+      <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:0.85rem; text-align:left; margin-bottom:1.25rem; font-size:0.82rem;">
+        <div><strong>Application:</strong> <span style="color:var(--accent-cyan);">${escapeHTML(clientId)}</span></div>
+        <div style="margin-top:0.35rem;"><strong>Permission Scope:</strong> <span>${escapeHTML(scope)}</span></div>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-outline" style="flex:1;" onclick="window.history.back();">Cancel</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="alert('Authorization confirmed.'); window.location.href='index.html';">Authorize Application</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
 
 /* ==========================================================================
    Theme Management (Dark / Light)
@@ -358,6 +393,19 @@ async function loadPosts() {
     console.warn('Could not fetch primer-data.json', err);
   }
 
+  // Load curated Textbook & Chapter Book Folios
+  try {
+    const bRes = await fetch('books-data.json');
+    if (bRes.ok) {
+      state.bookPosts = await bRes.json();
+      if (typeof FolioCacheDB !== 'undefined') {
+        FolioCacheDB.cacheFolios(state.bookPosts, 'book').catch(console.warn);
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch books-data.json', err);
+  }
+
   const cloudOrLocal = await SupabaseBridge.getPosts();
   if (cloudOrLocal && cloudOrLocal.length > 0) {
     const datasetIds = new Set(datasets.map(d => d.id));
@@ -367,6 +415,14 @@ async function loadPosts() {
     state.posts = datasets;
   } else if (!state.posts.length) {
     state.posts = [...SEED_PAPERS];
+  }
+
+  // Seamlessly interleave book folios into main dispatch feed
+  if (state.bookPosts && state.bookPosts.length > 0) {
+    const existingIds = new Set(state.posts.map(p => p.id));
+    const newBooks = state.bookPosts.filter(b => !existingIds.has(b.id));
+    // Insert after first post so the textbook collection is immediately accessible
+    state.posts.splice(1, 0, ...newBooks);
   }
 
   state.interleavedPosts = interleaveDisciplinesByImpact(state.posts);
@@ -573,6 +629,8 @@ function renderFeed() {
   let activePool;
   if (state.feedMode === 'primer') {
     activePool = state.primerPosts;
+  } else if (state.feedMode === 'books') {
+    activePool = state.bookPosts && state.bookPosts.length > 0 ? state.bookPosts : state.posts.filter(p => p.isBookFolio);
   } else if (state.currentTopic === 'all' && !state.showSavedOnly && !state.searchQuery) {
     if (!state.interleavedPosts || state.interleavedPosts.length !== state.posts.length) {
       state.interleavedPosts = interleaveDisciplinesByImpact(state.posts);
@@ -594,7 +652,8 @@ function renderFeed() {
       const matchAuthors = (p.authors || '').toLowerCase().includes(q);
       const matchHook = (p.slides[0]?.hook || '').toLowerCase().includes(q);
       const matchField = (p.field || '').toLowerCase().includes(q);
-      if (!matchTitle && !matchAuthors && !matchHook && !matchField) return false;
+      const matchBook = (p.bookMeta?.bookTitle || '').toLowerCase().includes(q) || (p.bookMeta?.collectionTitle || '').toLowerCase().includes(q);
+      if (!matchTitle && !matchAuthors && !matchHook && !matchField && !matchBook) return false;
     }
     return true;
   });
@@ -609,6 +668,10 @@ function renderFeed() {
       viewText.textContent = state.currentTopic !== 'all'
         ? `Foundations: ${showingCount} of ${totalCount} Core Basics (${state.currentTopic})`
         : `Foundations: First-Principles & Core Basics (${totalCount} Folios)`;
+    } else if (state.feedMode === 'books') {
+      viewText.textContent = state.currentTopic !== 'all'
+        ? `Books & Chapters: ${showingCount} of ${totalCount} Topics (${state.currentTopic})`
+        : `Books: Curated Chapters & Sequential Treatises (${totalCount} Topics)`;
     } else if (state.currentTopic !== 'all') {
       viewText.textContent = `${state.currentTopic}: Showing ${showingCount} of ${totalCount.toLocaleString()} Folios`;
     } else {
@@ -713,9 +776,41 @@ function renderPostCard(post) {
   const isLiked = state.likedPostIds.has(post.id);
   const isSaved = state.savedPostIds.has(post.id);
   const slideCount = post.slides.length;
+  const isBook = Boolean(post.isBookFolio && post.bookMeta);
 
   const slidesHTML = post.slides.map((s, idx) => {
     if (idx === 0) {
+      if (isBook) {
+        return `
+          <div class="post-slide slide-type-hero slide-type-book" data-index="${idx}">
+            <div class="slide-badge-row">
+              <span class="slide-label book-badge-label">📖 Book Chapter Excerpt</span>
+              <span class="post-tag book-tag">📖 ${escapeHTML(post.field)}</span>
+            </div>
+            <div class="book-two-tier-header">
+              <!-- Tier 1: Clickable Broad Topic Heading (Opens Sequence Panel) -->
+              <button type="button" class="book-main-topic-btn" onclick="openBookSequenceDrawer('${post.id}')" title="Click to browse chapter sequence in order">
+                <span class="book-main-topic-icon">📖</span>
+                <div class="book-main-topic-text-group">
+                  <span class="book-main-topic-eyebrow">Book Collection · Tap to browse chapter</span>
+                  <span class="book-main-topic-title">${escapeHTML(post.bookMeta.collectionTitle || post.bookMeta.chapterTitle || 'Chapter Collection')}</span>
+                </div>
+                <span class="book-main-topic-action">Sequence ▾</span>
+              </button>
+
+              <!-- Tier 2: Specific Subtopic Title -->
+              <h2 class="paper-hero-title book-hero-title">${escapeHTML(post.title)}</h2>
+              <div class="breakthrough-hook book-hook">"${escapeHTML(s.hook)}"</div>
+            </div>
+            <div class="slide-footer-row book-footer-row">
+              <div class="book-bottom-citation">
+                <span class="book-citation-icon">📚</span>
+                <span class="book-citation-text">${escapeHTML(post.bookMeta.bookTitle)}${post.bookMeta.edition ? ' (' + escapeHTML(post.bookMeta.edition) + ')' : ''} &bull; ${escapeHTML(post.bookMeta.chapter)} ${escapeHTML(post.bookMeta.chapterTitle || '')}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
       return `
         <div class="post-slide slide-type-hero" data-index="${idx}">
           <div class="slide-badge-row">
@@ -732,6 +827,32 @@ function renderPostCard(post) {
         </div>
       `;
     } else {
+      if (isBook) {
+        return `
+          <div class="post-slide slide-type-dive slide-type-book" data-index="${idx}">
+            <div class="slide-badge-row">
+              <span class="dive-section-tag book-dive-tag">${escapeHTML(s.title || '[Book Excerpt]')}</span>
+              <span class="post-tag book-tag">📖 ${escapeHTML(post.field)}</span>
+            </div>
+            <div class="book-dive-body">
+              <button type="button" class="book-dive-compact-topic" onclick="openBookSequenceDrawer('${post.id}')" title="Chapter Sequence">
+                <span>📖 ${escapeHTML(post.bookMeta.collectionTitle || post.bookMeta.bookTitle)}</span>
+                <span class="book-chevron-mini">▾</span>
+              </button>
+              <h3 class="dive-heading book-dive-heading">${escapeHTML(s.title || 'In-Depth Excerpt')}</h3>
+              <div class="dive-content book-dive-content">
+                <p>${escapeHTML(s.content)}</p>
+              </div>
+            </div>
+            <div class="slide-footer-row book-footer-row">
+              <div class="book-bottom-citation">
+                <span class="book-citation-icon">📚</span>
+                <span class="book-citation-text">${escapeHTML(post.bookMeta.bookTitle)}${post.bookMeta.edition ? ' (' + escapeHTML(post.bookMeta.edition) + ')' : ''} &bull; ${escapeHTML(post.bookMeta.chapter)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
       const stepTags = post.isPrimer
         ? ['[01] Core Concept', '[02] First Principles', '[03] Mechanism & Step-by-Step', '[04] Modern Applications']
         : ['[01] Thesis', '[02] Methodology & Specs', '[03] Quantitative Evidence', '[04] Critical Frontier'];
@@ -780,14 +901,14 @@ function renderPostCard(post) {
   const isColleague = state.colleagues.has(post.authors);
 
   return `
-    <article class="post-card-wrapper" id="post-${post.id}">
+    <article class="post-card-wrapper ${isBook ? 'book-card-theme' : ''}" id="post-${post.id}">
       <!-- Author & Header Row (Clean, single follow button on right) -->
-      <header class="post-header">
+      <header class="post-header ${isBook ? 'book-post-header' : ''}">
         <div class="author-info">
-          <div class="author-avatar">${getInitials(post.authors)}</div>
+          <div class="author-avatar ${isBook ? 'book-author-avatar' : ''}">${isBook ? '📖' : getInitials(post.authors)}</div>
           <div class="author-meta">
             <span class="author-name">${escapeHTML(post.authors)}</span>
-            <span class="author-sub">${formatDate(post.createdAt)}</span>
+            <span class="author-sub">${isBook ? '📖 ' + escapeHTML(post.bookMeta.bookTitle) : formatDate(post.createdAt)}</span>
           </div>
         </div>
         <button class="colleague-btn ${isColleague ? 'active' : ''}" onclick="toggleColleague(event, '${escapeHTML(post.authors)}')" title="Connect with Colleague">
@@ -2054,17 +2175,23 @@ function initEventListeners() {
     });
   });
 
-  // Feed Mode Switcher (Frontier Research vs Foundations 101)
+  // Feed Mode Switcher (Frontier Research vs Foundations 101 vs Books / Chapters)
   function setFeedMode(mode) {
     state.feedMode = mode;
     state.pageLimit = 15;
     state.showSavedOnly = false;
 
     const isPrimer = mode === 'primer';
-    document.getElementById('modeFrontierBtn')?.classList.toggle('active', !isPrimer);
+    const isBooks = mode === 'books';
+    const isFrontier = mode === 'frontier';
+
+    document.getElementById('modeFrontierBtn')?.classList.toggle('active', isFrontier);
     document.getElementById('modePrimerBtn')?.classList.toggle('active', isPrimer);
+    document.getElementById('modeBooksBtn')?.classList.toggle('active', isBooks);
+
     document.getElementById('navPrimerBtn')?.classList.toggle('active', isPrimer);
-    document.getElementById('navFeedBtn')?.classList.toggle('active', !isPrimer);
+    document.getElementById('navBooksBtn')?.classList.toggle('active', isBooks);
+    document.getElementById('navFeedBtn')?.classList.toggle('active', isFrontier);
     document.getElementById('navSavedBtn')?.classList.remove('active');
     document.getElementById('filterSavedOnly')?.classList.remove('active');
 
@@ -2078,6 +2205,16 @@ function initEventListeners() {
 
   document.getElementById('modePrimerBtn')?.addEventListener('click', () => {
     setFeedMode('primer');
+  });
+
+  document.getElementById('modeBooksBtn')?.addEventListener('click', () => {
+    setFeedMode('books');
+  });
+
+  // Sidebar Nav: Books & Chapters
+  document.getElementById('navBooksBtn')?.addEventListener('click', () => {
+    setFeedMode('books');
+    document.getElementById('sidebarNav')?.classList.remove('mobile-open');
   });
 
   // Sidebar Nav: Foundations (Basics)
@@ -3598,6 +3735,114 @@ function closeLikedByModal() {
   const backdrop = document.getElementById('likedByModalBackdrop');
   if (modal) modal.classList.remove('open');
   if (backdrop) backdrop.classList.remove('open');
+}
+
+/* ==========================================================================
+   Book Chapter Sequence Navigation Panel (#bookSequenceDrawer)
+   Sequential topic reading in exact book order (without bulky numbering)
+   ========================================================================== */
+function openBookSequenceDrawer(postId) {
+  const allFolios = (state.posts || []).concat(state.bookPosts || []);
+  const currentPost = allFolios.find(p => p.id === postId);
+  if (!currentPost || !currentPost.bookMeta) return;
+
+  const meta = currentPost.bookMeta;
+  const collectionId = meta.collectionId;
+
+  // Filter all siblings in this chapter collection
+  let siblings = allFolios.filter(p => p.bookMeta && p.bookMeta.collectionId === collectionId);
+  const seen = new Set();
+  siblings = siblings.filter(p => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+
+  // Sort strictly by sequenceIndex
+  siblings.sort((a, b) => (a.bookMeta.sequenceIndex || 0) - (b.bookMeta.sequenceIndex || 0));
+
+  const drawer = document.getElementById('bookSequenceDrawer');
+  const backdrop = document.getElementById('bookSequenceBackdrop');
+  const bookTitleEl = document.getElementById('bookSequenceBookTitle');
+  const editionEl = document.getElementById('bookSequenceEdition');
+  const chapterEl = document.getElementById('bookSequenceChapter');
+  const mainTopicEl = document.getElementById('bookSequenceMainTopic');
+  const countEl = document.getElementById('bookSequenceCount');
+  const listEl = document.getElementById('bookSequenceList');
+
+  if (bookTitleEl) bookTitleEl.textContent = meta.bookTitle || 'Book Chapter Sequence';
+  if (editionEl) editionEl.textContent = meta.edition || 'Textbook Edition';
+  if (chapterEl) chapterEl.textContent = `${meta.chapter || ''} ${meta.chapterTitle ? '· ' + meta.chapterTitle : ''}`;
+  if (mainTopicEl) mainTopicEl.textContent = meta.collectionTitle || currentPost.title;
+  if (countEl) countEl.textContent = `${siblings.length} Topics in Sequence`;
+
+  if (listEl) {
+    listEl.innerHTML = siblings.map(sib => {
+      const isCurrent = sib.id === currentPost.id;
+      return `
+        <div class="book-sequence-item ${isCurrent ? 'active-reading' : ''}" onclick="selectBookSequenceTopic('${sib.id}')" role="button" tabindex="0">
+          <div class="sequence-bullet-col">
+            <span class="sequence-node ${isCurrent ? 'current-node' : ''}"></span>
+          </div>
+          <div class="sequence-item-content">
+            <div class="sequence-topic-title">${escapeHTML(sib.title)}</div>
+            <div class="sequence-topic-meta">
+              ${isCurrent ? '<span class="sequence-current-badge">● Currently Reading</span>' : '<span class="sequence-read-action">Read Topic &rarr;</span>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  if (backdrop) backdrop.classList.add('visible');
+  if (drawer) drawer.classList.add('visible');
+}
+
+function closeBookSequenceDrawer() {
+  const drawer = document.getElementById('bookSequenceDrawer');
+  const backdrop = document.getElementById('bookSequenceBackdrop');
+  if (drawer) drawer.classList.remove('visible');
+  if (backdrop) backdrop.classList.remove('visible');
+}
+
+function selectBookSequenceTopic(postId) {
+  closeBookSequenceDrawer();
+  const allFolios = (state.posts || []).concat(state.bookPosts || []);
+  const targetPost = allFolios.find(p => p.id === postId);
+  if (!targetPost) return;
+
+  // If in primer mode, switch to books or frontier
+  if (state.feedMode === 'primer') {
+    setFeedMode('books');
+  }
+
+  // Clear filters that would hide the post
+  if (state.currentTopic !== 'all' && state.currentTopic !== targetPost.field) {
+    syncTopicSelection('all');
+  }
+  if (state.searchQuery) {
+    state.searchQuery = '';
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.value = '';
+  }
+
+  // Ensure post is present in state.posts
+  if (!state.posts.some(p => p.id === postId)) {
+    state.posts.unshift(targetPost);
+  }
+
+  renderFeed();
+
+  // Scroll smoothly to target post and pulse
+  setTimeout(() => {
+    const postEl = document.getElementById(`post-${postId}`);
+    if (postEl) {
+      postEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      postEl.classList.add('folio-highlight-pulse');
+      setTimeout(() => postEl.classList.remove('folio-highlight-pulse'), 2500);
+    }
+  }, 120);
 }
 
 /* ==========================================================================

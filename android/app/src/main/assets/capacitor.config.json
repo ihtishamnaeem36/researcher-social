@@ -1,9 +1,9 @@
 {
-  "appId": "com.folerio.app",
-  "appName": "Folerio",
-  "webDir": "www",
-  "server": {
-    "androidScheme": "https",
-    "cleartext": true
-  }
+	"appId": "com.folerio.app",
+	"appName": "Folerio",
+	"webDir": "www",
+	"server": {
+		"androidScheme": "https",
+		"cleartext": true
+	}
 }

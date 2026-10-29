@@ -1,0 +1,286 @@
+[
+  {
+    "id": "book-genetics-11-2-random-orientation",
+    "isBookFolio": true,
+    "title": "Random Orientation of Transcription of Most Genes",
+    "authors": "Leland Hartwell, Michael Goldberg, Janice Fischer, Leroy Hood",
+    "field": "Biotech & Genetics",
+    "theme": "parchment",
+    "likes": 214,
+    "bookmarked": false,
+    "liked": false,
+    "workType": "curated_book",
+    "createdAt": "2026-10-25T10:00:00.000Z",
+    "bookMeta": {
+      "bookTitle": "Genetics: From Genes to Genomes",
+      "edition": "7th Edition",
+      "chapter": "Chapter 11.2",
+      "chapterTitle": "Genome Architecture and Evolution",
+      "collectionId": "genetics-11-2-gene-arrangement",
+      "collectionTitle": "The Arrangement of Genes in the Genome Is Not Uniform",
+      "sequenceIndex": 1,
+      "totalInSequence": 3,
+      "section": "11.2.1"
+    },
+    "slides": [
+      {
+        "type": "hero",
+        "hook": "In eukaryotic genomes, adjacent genes are transcribed in opposing 5'→3' orientations across both DNA strands, preventing steric transcriptional collisions and enabling bidirectional promoter control."
+      },
+      {
+        "type": "concept",
+        "title": "Bidirectional & Divergent Transcription",
+        "content": "Unlike polycistronic bacterial operons where genes with shared functions transcribe together in a uniform polarity, eukaryotic genes exhibit an apparently random orientation. Neighboring genes can transcribe along either the Watson (sense) or Crick (antisense) strand independently."
+      },
+      {
+        "type": "mechanism",
+        "title": "Preventing Polymerase Collisions",
+        "content": "Alternating transcriptional orientation prevents head-to-head collision between converging RNA Polymerase II complexes. Intergenic insulating elements and chromatin boundaries safeguard adjoining genes from read-through transcription and unintended promoter interference."
+      },
+      {
+        "type": "evolution",
+        "title": "Regulatory Independence & Co-regulation",
+        "content": "Random orientation facilitates shared divergent promoters where a single central regulatory region drives simultaneous transcription of two functionally related genes in opposite directions, balancing complex subunit ratios during cellular differentiation."
+      }
+    ],
+    "comments": []
+  },
+  {
+    "id": "book-genetics-11-2-variable-density",
+    "isBookFolio": true,
+    "title": "Variable Gene Density",
+    "authors": "Leland Hartwell, Michael Goldberg, Janice Fischer, Leroy Hood",
+    "field": "Biotech & Genetics",
+    "theme": "parchment",
+    "likes": 189,
+    "bookmarked": false,
+    "liked": false,
+    "workType": "curated_book",
+    "createdAt": "2026-10-25T11:00:00.000Z",
+    "bookMeta": {
+      "bookTitle": "Genetics: From Genes to Genomes",
+      "edition": "7th Edition",
+      "chapter": "Chapter 11.2",
+      "chapterTitle": "Genome Architecture and Evolution",
+      "collectionId": "genetics-11-2-gene-arrangement",
+      "collectionTitle": "The Arrangement of Genes in the Genome Is Not Uniform",
+      "sequenceIndex": 2,
+      "totalInSequence": 3,
+      "section": "11.2.2"
+    },
+    "slides": [
+      {
+        "type": "hero",
+        "hook": "Eukaryotic chromosomes contain dramatic fluctuations in gene density, alternating between crowded gene-rich clusters and expansive megabase gene deserts filled with critical distal regulatory elements."
+      },
+      {
+        "type": "concept",
+        "title": "Gene-Rich Hubs vs. Gene Deserts",
+        "content": "Chromosomes do not distribute loci uniformly. Certain genomic regions pack dozens of active genes within 100 kilobases, while neighboring segments stretch for millions of base pairs without a single protein-coding open reading frame."
+      },
+      {
+        "type": "mechanism",
+        "title": "Isochores & Chromatin Compaction",
+        "content": "High gene density correlates strongly with elevated GC content (heavy isochores) and open euchromatin. In contrast, AT-rich gene deserts are typically packaged into heterochromatin near the nuclear lamina, replicating late in S-phase."
+      },
+      {
+        "type": "evolution",
+        "title": "The Hidden Function of Gene Deserts",
+        "content": "Far from being useless 'junk DNA', gene deserts act as long-range spatial scaffolds. They harbor ultrasensitive developmental enhancers, long non-coding RNAs, and topological insulator boundaries that fold chromatin in 3D to control distant target promoters."
+      }
+    ],
+    "comments": []
+  },
+  {
+    "id": "book-genetics-11-2-domain-architecture",
+    "isBookFolio": true,
+    "title": "Alterations in Domain Architecture",
+    "authors": "Leland Hartwell, Michael Goldberg, Janice Fischer, Leroy Hood",
+    "field": "Biotech & Genetics",
+    "theme": "parchment",
+    "likes": 342,
+    "bookmarked": true,
+    "liked": true,
+    "workType": "curated_book",
+    "createdAt": "2026-10-25T12:00:00.000Z",
+    "bookMeta": {
+      "bookTitle": "Genetics: From Genes to Genomes",
+      "edition": "7th Edition",
+      "chapter": "Chapter 11.2",
+      "chapterTitle": "Genome Architecture and Evolution",
+      "collectionId": "genetics-11-2-gene-arrangement",
+      "collectionTitle": "The Arrangement of Genes in the Genome Is Not Uniform",
+      "sequenceIndex": 3,
+      "totalInSequence": 3,
+      "section": "11.2.3"
+    },
+    "slides": [
+      {
+        "type": "hero",
+        "hook": "Exons often encode discrete protein domains analogous to cars of a train; evolutionary exon shuffling, addition, and deletion generate entirely novel domain architectures with new cellular roles."
+      },
+      {
+        "type": "concept",
+        "title": "Exons Encode Discrete 3D Protein Domains",
+        "content": "Genome annotation has revealed that exons often encode discrete protein domains, each of which is a linear sequence of amino acids that folds up in three-dimensional space so as to act as a single functional unit."
+      },
+      {
+        "type": "analogy",
+        "title": "The Train Analogy of Modular Architecture",
+        "content": "Genes with multiple exons often encode proteins with multiple domains analogous to the cars of a train. Each train is composed of many different cars, and each kind of car (engine, flat car, dining car, caboose) has a discrete function. Different trains may carry different combinations of cars and thus fulfill different purposes."
+      },
+      {
+        "type": "evolution",
+        "title": "Exon Shuffling Generates Evolutionary Novelty",
+        "content": "Similarly, many genes are composed of multiple exons that encode discrete protein domains. The shuffling, addition, or deletion of exons during evolution can create new genes whose protein products have novel domain architectures (different numbers and kinds of domains in different orders) and thus can assume new roles in cells and organisms."
+      }
+    ],
+    "comments": [
+      {
+        "id": "c-book-1",
+        "author": "Dr. Aris Thorne (Max Planck Institute)",
+        "text": "The train analogy captures modular protein evolution with absolute clarity. Exon shuffling is why metazoans diversified so rapidly during the Cambrian explosion.",
+        "time": "4h ago",
+        "replies": []
+      }
+    ]
+  },
+  {
+    "id": "book-alberts-4-2-variegation",
+    "isBookFolio": true,
+    "title": "Position Effect Variegation and Heterochromatin Spreading",
+    "authors": "Bruce Alberts, Rebecca Heald, Alexander Johnson, David Morgan",
+    "field": "Biotech & Genetics",
+    "theme": "parchment",
+    "likes": 167,
+    "bookmarked": false,
+    "liked": false,
+    "workType": "curated_book",
+    "createdAt": "2026-10-24T09:00:00.000Z",
+    "bookMeta": {
+      "bookTitle": "Molecular Biology of the Cell",
+      "edition": "7th Edition",
+      "chapter": "Chapter 4.2",
+      "chapterTitle": "Chromatin Structure and Epigenetics",
+      "collectionId": "alberts-4-2-chromatin-regulation",
+      "collectionTitle": "How Chromatin Structure Regulates Gene Expression",
+      "sequenceIndex": 1,
+      "totalInSequence": 3,
+      "section": "4.2.1"
+    },
+    "slides": [
+      {
+        "type": "hero",
+        "hook": "When active genes are relocated near dense heterochromatin through chromosomal rearrangement, heterochromatin spreads laterally in an all-or-none manner, creating mosaic expression patterns across cell lineages."
+      },
+      {
+        "type": "concept",
+        "title": "The Discovery of Position Effect",
+        "content": "Originally observed in Drosophila white gene inversions, position effect variegation demonstrates that a gene's activity depends directly on its physical chromatin neighborhood rather than nucleotide mutations in its promoter alone."
+      },
+      {
+        "type": "mechanism",
+        "title": "Cooperative Spreading Mechanism",
+        "content": "Heterochromatin-specific proteins like HP1 bind methylated histone H3K9 and recruit histone methyltransferases, establishing a cooperative self-propagating loop that travels linearly along the chromosome until stopped by a barrier insulator."
+      },
+      {
+        "type": "evolution",
+        "title": "Epigenetic Memory in Development",
+        "content": "Once heterochromatin spreads to silence a locus during early embryogenesis, the compacted state is faithfully inherited through successive mitotic divisions, cementing terminal lineage commitment in differentiated tissues."
+      }
+    ],
+    "comments": []
+  },
+  {
+    "id": "book-alberts-4-2-histone-acetylation",
+    "isBookFolio": true,
+    "title": "Histone Tail Acetylation and Nucleosome Sliding",
+    "authors": "Bruce Alberts, Rebecca Heald, Alexander Johnson, David Morgan",
+    "field": "Biotech & Genetics",
+    "theme": "parchment",
+    "likes": 205,
+    "bookmarked": false,
+    "liked": false,
+    "workType": "curated_book",
+    "createdAt": "2026-10-24T10:00:00.000Z",
+    "bookMeta": {
+      "bookTitle": "Molecular Biology of the Cell",
+      "edition": "7th Edition",
+      "chapter": "Chapter 4.2",
+      "chapterTitle": "Chromatin Structure and Epigenetics",
+      "collectionId": "alberts-4-2-chromatin-regulation",
+      "collectionTitle": "How Chromatin Structure Regulates Gene Expression",
+      "sequenceIndex": 2,
+      "totalInSequence": 3,
+      "section": "4.2.2"
+    },
+    "slides": [
+      {
+        "type": "hero",
+        "hook": "Covalent acetylation of lysine residues on protruding histone N-terminal tails neutralizes positive charge, weakening electrostatic DNA contact and allowing nucleosomes to slide dynamically along DNA."
+      },
+      {
+        "type": "concept",
+        "title": "Electrostatic Unpacking of Fibers",
+        "content": "Histone acetyltransferases (HATs) transfer acetyl groups to lysine residues on histone tails. By neutralizing the positive charges that bind tightly to the negatively charged phosphodiester backbone, acetylation decompresses 30-nm fibers into accessible beads-on-a-string."
+      },
+      {
+        "type": "mechanism",
+        "title": "Bromodomain Recruitment Cascades",
+        "content": "Acetylated lysines act as specific docking pads for proteins containing bromodomains, including transcription factors, basal transcription machinery (TFIID), and chromatin remodeling enzymes that stabilize the transcription initiation bubble."
+      },
+      {
+        "type": "evolution",
+        "title": "Reversible Transcriptional Plasticity",
+        "content": "Histone deacetylases (HDACs) rapidly reverse acetylation upon receiving repressive signaling cues, enabling organisms to dynamically toggle metabolic and stress-response gene expression on millisecond-to-minute timescales."
+      }
+    ],
+    "comments": []
+  },
+  {
+    "id": "book-alberts-4-2-chromatin-remodeling",
+    "isBookFolio": true,
+    "title": "ATP-Dependent Chromatin Remodeling Complexes",
+    "authors": "Bruce Alberts, Rebecca Heald, Alexander Johnson, David Morgan",
+    "field": "Biotech & Genetics",
+    "theme": "parchment",
+    "likes": 230,
+    "bookmarked": false,
+    "liked": false,
+    "workType": "curated_book",
+    "createdAt": "2026-10-24T11:00:00.000Z",
+    "bookMeta": {
+      "bookTitle": "Molecular Biology of the Cell",
+      "edition": "7th Edition",
+      "chapter": "Chapter 4.2",
+      "chapterTitle": "Chromatin Structure and Epigenetics",
+      "collectionId": "alberts-4-2-chromatin-regulation",
+      "collectionTitle": "How Chromatin Structure Regulates Gene Expression",
+      "sequenceIndex": 3,
+      "totalInSequence": 3,
+      "section": "4.2.3"
+    },
+    "slides": [
+      {
+        "type": "hero",
+        "hook": "Multi-subunit ATP-dependent machines harness ATP hydrolysis to translocate DNA loops around histone octamers, exposing occluded promoter sequences for transcription factor engagement."
+      },
+      {
+        "type": "concept",
+        "title": "Mechanical DNA Translocation",
+        "content": "Remodeling complexes such as SWI/SNF, ISWI, and INO80 use catalytic ATPase subunits to grasp the nucleosomal DNA and pump small loops across the octamer surface in an inchworm-like wave without disassembling the core particle."
+      },
+      {
+        "type": "mechanism",
+        "title": "Octamer Ejection & Histone Exchange",
+        "content": "Beyond simple sliding, specialized remodelers can completely evict histone H2A-H2B dimers or substitute canonical core histones with specialized variants like H2A.Z, altering physical stability at transcription start sites."
+      },
+      {
+        "type": "evolution",
+        "title": "Master Gatekeepers of Cellular Identity",
+        "content": "Mutations in mammalian SWI/SNF (BAF) subunits occur in over 20% of all human cancers, highlighting the essential role of physical nucleosome repositioning in tumor suppression and developmental fidelity."
+      }
+    ],
+    "comments": []
+  }
+]

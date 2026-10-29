@@ -82,7 +82,7 @@ const SupabaseBridge = {
     if (isLocalDevServer) {
       return `${window.location.origin}${window.location.pathname}`;
     }
-    return 'https://ihtishamnaeem36.github.io/researcher-social/';
+    return 'https://ihtishamnaeem36.github.io/researcher-social';
   },
 
   /**
@@ -317,6 +317,50 @@ const SupabaseBridge = {
       }
     } catch (err) {
       console.error('Error handling Supabase OAuth redirect:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Handle incoming query parameters (PKCE code exchange or token params)
+   */
+  async handleAuthQuery(queryStr) {
+    if (!queryStr) return null;
+    const cleanQuery = queryStr.startsWith('?') ? queryStr.slice(1) : queryStr;
+    const params = new URLSearchParams(cleanQuery);
+    const accessToken = params.get('access_token');
+    if (accessToken) {
+      window.location.hash = `#${cleanQuery}`;
+      return this.handleAuthRedirect();
+    }
+    const code = params.get('code');
+    if (code && this.config.isConnected) {
+      try {
+        const res = await fetch(`${this.config.url}/auth/v1/token?grant_type=pkce`, {
+          method: 'POST',
+          headers: {
+            'apikey': this.config.anonKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            auth_code: code,
+            code_verifier: localStorage.getItem('supabase.auth.code_verifier') || ''
+          })
+        });
+        if (res.ok) {
+          const session = await res.json();
+          this.saveSession(session);
+          const user = await this.fetchUser(session.access_token);
+          if (user) {
+            session.user = user;
+            this.saveSession(session);
+            const profile = await this.syncProfile(user);
+            return this.formatScholarUser(user, profile);
+          }
+        }
+      } catch (e) {
+        console.warn('PKCE exchange note:', e);
+      }
     }
     return null;
   },

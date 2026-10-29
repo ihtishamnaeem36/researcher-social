@@ -98,6 +98,15 @@
           <span class="nav-badge" style="background:#10b981;color:#fff;">101</span>
         </button>
 
+        <button class="nav-item" data-nav="books" id="navBooksBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Books &amp; Chapters</span>
+          <span class="nav-badge" style="background:#8b5cf6;color:#fff;">New</span>
+        </button>
+
         <button class="nav-item" data-nav="saved" id="navSavedBtn">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
@@ -353,7 +362,7 @@
 
         <!-- View 1: Dispatch Feed (Tracked Fields & Colleagues Stream) -->
         <div id="feedViewContainer" class="app-view-container active">
-          <!-- Feed Mode Switcher (Frontier Research vs Foundations / Basics) -->
+          <!-- Feed Mode Switcher (Frontier Research vs Foundations / Basics vs Books / Textbooks) -->
           <div class="feed-mode-strip">
             <div class="mode-switch-pill">
               <button class="mode-tab active" id="modeFrontierBtn" data-mode="frontier" title="Cutting-edge frontier papers">
@@ -364,6 +373,11 @@
                 <span class="mode-icon">🌱</span>
                 <span class="mode-label">Foundations</span>
                 <span class="mode-tag-badge">101</span>
+              </button>
+              <button class="mode-tab" id="modeBooksBtn" data-mode="books" title="Curated textbooks, chapter topics, and sequential treatises">
+                <span class="mode-icon">📖</span>
+                <span class="mode-label">Books</span>
+                <span class="mode-tag-badge" style="background:#8b5cf6;">Chapters</span>
               </button>
             </div>
           </div>
@@ -1081,6 +1095,36 @@
     <div class="liked-by-body" id="likedByList">
       <!-- Populated dynamically by openLikedByModal(postId) -->
     </div>
+  </div>
+
+  <!-- Book Chapter Sequence Drawer / Small Panel -->
+  <div class="bottom-sheet-backdrop" id="bookSequenceBackdrop" onclick="closeBookSequenceDrawer()"></div>
+  <div class="book-sequence-drawer" id="bookSequenceDrawer" role="dialog" aria-label="Book Chapter Sequence">
+    <div class="book-sequence-header">
+      <div class="book-sequence-header-info">
+        <div class="book-badge-row">
+          <span class="book-edition-pill" id="bookSequenceEdition">7th Edition</span>
+          <span class="book-chapter-pill" id="bookSequenceChapter">Chapter 11.2</span>
+        </div>
+        <h3 class="book-sequence-book-title" id="bookSequenceBookTitle">Genetics: From Genes to Genomes</h3>
+        <div class="book-sequence-main-topic" id="bookSequenceMainTopic">The Arrangement of Genes in the Genome Is Not Uniform</div>
+      </div>
+      <button class="sheet-close-btn" onclick="closeBookSequenceDrawer()" aria-label="Close Sequence Panel">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="book-sequence-guide">
+      <span class="book-guide-text">Sequential topics in this chapter collection:</span>
+      <span class="book-guide-count" id="bookSequenceCount">3 Topics</span>
+    </div>
+    <div class="book-sequence-list" id="bookSequenceList">
+      <!-- Populated dynamically with sequence topic items (no numbering, ultra-clean) -->
+    </div>
+  </div>
+
   <!-- Colleague & Scholar Notifications Center Modal -->
   <div class="bottom-sheet-backdrop" id="notificationsModalBackdrop" onclick="closeNotificationsModal()"></div>
   <div class="notifications-modal" id="notificationsModal" role="dialog" aria-label="Notifications Center">

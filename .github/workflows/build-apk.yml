@@ -90,23 +90,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.1
-          name: "Folerio Android v1.5.1 (Unified Prismatic Logo, Comment Auto-Copy, Mobile Modals & Direct Paper Links)"
+          tag_name: v1.5.2
+          name: "Folerio Android v1.5.2 (100% Standalone Offline APK, Book Collections & Supabase Auth Fix)"
           body: |
-            ### Folerio Standalone Android APK (v1.5.1)
-            - **Unified Proprietary Folerio Prismatic Logo:** Completely removed the old folded paper "doc-style" logo inside the app. Replaced it inside (sidebar brand, mobile topbar, authentication emblem) and outside (Android app launcher icon & cosmic canvas background) with Folerio's bespoke, clean Prismatic Crest.
-            - **Intelligent Comment Draft & Auto-Copy:**
-              - If an unauthenticated user submits a critique, their text is automatically copied to the device clipboard, saved to draft session storage, and the sign-in modal is cleanly presented.
-              - Upon signing in, their drafted critique is automatically restored into the discussion sheet, ready to post with one tap.
-              - If a network error or offline condition occurs, the critique is immediately copied to the clipboard and cached locally so no intellectual work is ever lost.
-            - **Edge-to-Edge Responsive Phone Modals:**
-              - Completely redesigned the Login & Create Account Modal (`#authModal`) and Share & Export Modal (`#shareModal`) for mobile screens.
-              - Constrained widths to `calc(100vw - 20px)`, adjusted typography, scaled button sizes, and eliminated horizontal overflow or border clipping.
-            - **Direct, Accessible Academic Paper Links:**
-              - Resolved external link opening in Android WebView: primary sources and DOIs now cleanly launch in the user's default system browser via Android Intent and Capacitor Browser integration.
-              - Upgraded all insecure `http://arxiv.org` and `http://doi.org` URLs to secure `https://` protocols with automatic DOI prefix expansion.
-              - Replaced raw truncated link text with a clean, dedicated "Read Full Paper ↗" action button on every research slide.
-            - **Complete Life Sciences Foundational Curriculum (Modules 3.1 - 3.7):** All 8 biological masterclasses covering Abiogenesis, Evolution, Cell Bioenergetics, Genetics & CRISPR, Microbiology, Physiology & Feedback Loops, Ecology & Trophic Dynamics, and Developmental Pluripotency.
-            - **Universal Disciplines Expansion (53 Foundational Primers):** Complete first-principles coverage across all 22 disciplines in human knowledge.
+            ### Folerio Standalone Android APK (v1.5.2)
+            - **100% Independent Offline APK Loading:** Fixed WebViewClient conflict in MainActivity to fully preserve Capacitor's native asset loader. Folerio now launches completely offline directly from the APK bundle without requiring an active internet connection.
+            - **Eliminated 'localhost:3000 refused to connect' Deep-Link Errors:** Secured deep link handlers to prevent WebViews from navigating to localhost:3000, ensuring users stay on the standalone app with seamless OAuth token processing.
+            - **New Book Folios & Sequential Chapter Collections:** Added textbook reading directly in Folerio with hierarchical two-tier headers, sequential topic drawers, and bottom book citations (starting with *Genetics: From Genes to Genomes* 7th Ed and *Molecular Biology of the Cell*).
             - **Direct Download:** Download `Folerio.apk` below and tap Install/Update.
           files: output/Folerio.apk

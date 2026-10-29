@@ -54,9 +54,17 @@ public class MainActivity extends BridgeActivity {
                 @Override
                 public void run() {
                     WebView webView = getBridge() != null ? getBridge().getWebView() : null;
-                    if (webView != null) {
-                        webView.loadUrl(data.toString());
+                    if (webView == null) return;
+
+                    // If incoming intent has OAuth tokens or query/fragment from Supabase
+                    String fragment = data.getFragment();
+                    String query = data.getQuery();
+                    if (fragment != null && !fragment.isEmpty()) {
+                        webView.evaluateJavascript("window.location.hash = '" + fragment.replace("'", "\\'") + "'; if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect(); }", null);
+                    } else if (query != null && (query.contains("access_token") || query.contains("code=") || query.contains("error="))) {
+                        webView.evaluateJavascript("if (window.SupabaseBridge) { SupabaseBridge.handleAuthQuery('" + query.replace("'", "\\'") + "'); }", null);
                     }
+                    // NEVER call webView.loadUrl() with remote or localhost:3000 URLs, keep app 100% on local offline assets
                 }
             });
         }
@@ -95,30 +103,9 @@ public class MainActivity extends BridgeActivity {
                 webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
                 webView.getSettings().setSupportMultipleWindows(false);
 
-                webView.setWebViewClient(new android.webkit.WebViewClient() {
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
-                        if (request != null && request.getUrl() != null) {
-                            String url = request.getUrl().toString();
-                            if (url.startsWith("http://") || url.startsWith("https://")) {
-                                String host = request.getUrl().getHost();
-                                if (host != null && !host.contains("localhost") && !host.contains("127.0.0.1") && !url.contains("capacitor://")) {
-                                    try {
-                                        String cleanUrl = url;
-                                        if (cleanUrl.startsWith("http://arxiv.org/")) cleanUrl = cleanUrl.replace("http://arxiv.org/", "https://arxiv.org/");
-                                        else if (cleanUrl.startsWith("http://doi.org/")) cleanUrl = cleanUrl.replace("http://doi.org/", "https://doi.org/");
-                                        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(cleanUrl));
-                                        startActivity(intent);
-                                        return true;
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }
-                        }
-                        return false;
-                    }
-                });
+                // Note: Do NOT call webView.setWebViewClient() here!
+                // Capacitor uses its own BridgeWebViewClient to intercept https://localhost/ and serve
+                // bundled offline assets from the APK. Overriding it breaks offline standalone mode!
 
                 webView.addJavascriptInterface(new FolerioNativeBridge(), "FolerioNative");
                 webView.setDownloadListener(new DownloadListener() {
@@ -161,6 +148,7 @@ public class MainActivity extends BridgeActivity {
                             }
                         }
                         android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(cleanUrl));
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(intent);
                     } catch (Exception e) {
                         e.printStackTrace();
