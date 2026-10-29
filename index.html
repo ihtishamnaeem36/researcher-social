@@ -312,14 +312,6 @@
             </svg>
             <span class="mobile-brand-name">FOLERIO</span>
           </div>
-
-          <div class="search-bar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="searchInput" placeholder="Search research, DOIs, authors, or concepts...">
-          </div>
         </div>
 
         <div class="topbar-right">
@@ -448,57 +440,90 @@
 
         <!-- View 2: Explore Horizons & Discovery Hub -->
         <div id="exploreViewContainer" class="app-view-container" style="display: none;">
-          <!-- Dedicated Explore Search Bar (Scrolls with page and disappears on scroll down) -->
+          <!-- Dedicated Explore Search Bar at the Top of Explore -->
           <div class="explore-search-container" id="exploreSearchContainer">
             <div class="explore-search-bar">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input type="text" id="exploreSearchInput" placeholder="Search disciplines, DOIs, authors, or concepts...">
+              <input type="text" id="exploreSearchInput" placeholder="Search authors, profiles, DOIs, or folios...">
+              <button type="button" id="exploreSearchClearBtn" class="explore-search-clear-btn" style="display:none;" onclick="clearExploreSearch()" aria-label="Clear Search">✕</button>
             </div>
           </div>
 
-          <div class="explore-hero-card">
-            <div class="explore-hero-badge">HORIZONS RADAR</div>
-            <h2 class="explore-hero-title">Explore Global Peer Literature</h2>
-            <p class="explore-hero-desc">Discover high-impact breakthroughs outside your followed fields. Connect with new colleagues and track emergent disciplines.</p>
-          </div>
+          <!-- Dynamic Search Results: Profiles First, Then Folios -->
+          <div id="exploreSearchResults" style="display: none;">
+            <!-- Section 1: Scholars & Profiles First -->
+            <div class="explore-search-section" id="exploreScholarsSection">
+              <div class="explore-section-header">
+                <div>
+                  <h3 id="exploreScholarsHeader">Scholars & Authors</h3>
+                  <span class="explore-section-sub">Verified academic profiles and investigators</span>
+                </div>
+              </div>
+              <div class="scholars-results-list" id="exploreScholarsList">
+                <!-- Dynamically populated with Profile cards -->
+              </div>
+            </div>
 
-          <!-- All Added Fields & Disciplines Matrix -->
-          <div class="explore-section-header">
-            <div>
-              <h3>All Global Disciplines</h3>
-              <span class="explore-section-sub">Tap any discipline to track or filter immediate literature</span>
+            <!-- Section 2: Breakthrough Folios & Literature Second -->
+            <div class="explore-search-section" id="exploreFoliosSection" style="margin-top: 1.5rem;">
+              <div class="explore-section-header">
+                <div>
+                  <h3 id="exploreFoliosHeader">Matching Breakthrough Folios</h3>
+                  <span class="explore-section-sub">Swipeable literature breakdowns</span>
+                </div>
+              </div>
+              <div class="posts-feed" id="exploreFoliosList">
+                <!-- Dynamically populated with Folio cards -->
+              </div>
             </div>
           </div>
 
-          <!-- Faculty Domain Filters -->
-          <div class="explore-faculty-tabs" id="exploreFacultyTabs">
-            <button type="button" class="faculty-tab-btn active" data-faculty="all">All Domains (22)</button>
-            <button type="button" class="faculty-tab-btn" data-faculty="famous">🔥 Famous & High-Impact</button>
-            <button type="button" class="faculty-tab-btn" data-faculty="natural">🌿 Natural & Physical</button>
-            <button type="button" class="faculty-tab-btn" data-faculty="engineering">🤖 Engineering & Tech</button>
-            <button type="button" class="faculty-tab-btn" data-faculty="medical">🏥 Medical & Life</button>
-            <button type="button" class="faculty-tab-btn" data-faculty="social">📈 Social Sciences</button>
-            <button type="button" class="faculty-tab-btn" data-faculty="humanities">🏛️ Humanities & Arts</button>
-            <button type="button" class="faculty-tab-btn" data-faculty="formal">📐 Formal Sciences</button>
-          </div>
-
-          <div class="disciplines-grid-matrix" id="exploreDisciplinesGrid">
-            <!-- Dynamically populated by app.js -->
-          </div>
-
-          <!-- Unfollowed Breakthroughs Radar -->
-          <div class="explore-section-header" style="margin-top: 1.5rem;">
-            <div>
-              <h3>Unfollowed Breakthroughs & Preprints</h3>
-              <span class="explore-section-sub">Serendipitous peer literature discovery</span>
+          <!-- Default Explore Content (Shown when search input is empty) -->
+          <div id="exploreDefaultContent">
+            <div class="explore-hero-card">
+              <div class="explore-hero-badge">HORIZONS RADAR</div>
+              <h2 class="explore-hero-title">Explore Global Peer Literature</h2>
+              <p class="explore-hero-desc">Discover high-impact breakthroughs outside your followed fields. Connect with new colleagues and track emergent disciplines.</p>
             </div>
-          </div>
 
-          <div id="explorePostsFeed" class="posts-feed">
-            <!-- Dynamically populated by app.js -->
+            <!-- All Added Fields & Disciplines Matrix -->
+            <div class="explore-section-header">
+              <div>
+                <h3>All Global Disciplines</h3>
+                <span class="explore-section-sub">Tap any discipline to track or filter immediate literature</span>
+              </div>
+            </div>
+
+            <!-- Faculty Domain Filters -->
+            <div class="explore-faculty-tabs" id="exploreFacultyTabs">
+              <button type="button" class="faculty-tab-btn active" data-faculty="all">All Domains (22)</button>
+              <button type="button" class="faculty-tab-btn" data-faculty="famous">🔥 Famous & High-Impact</button>
+              <button type="button" class="faculty-tab-btn" data-faculty="natural">🌿 Natural & Physical</button>
+              <button type="button" class="faculty-tab-btn" data-faculty="engineering">🤖 Engineering & Tech</button>
+              <button type="button" class="faculty-tab-btn" data-faculty="medical">🏥 Medical & Life</button>
+              <button type="button" class="faculty-tab-btn" data-faculty="social">📈 Social Sciences</button>
+              <button type="button" class="faculty-tab-btn" data-faculty="humanities">🏛️ Humanities & Arts</button>
+              <button type="button" class="faculty-tab-btn" data-faculty="formal">📐 Formal Sciences</button>
+            </div>
+
+            <div class="disciplines-grid-matrix" id="exploreDisciplinesGrid">
+              <!-- Dynamically populated by app.js -->
+            </div>
+
+            <!-- Unfollowed Breakthroughs Radar -->
+            <div class="explore-section-header" style="margin-top: 1.5rem;">
+              <div>
+                <h3>Unfollowed Breakthroughs & Preprints</h3>
+                <span class="explore-section-sub">Serendipitous peer literature discovery</span>
+              </div>
+            </div>
+
+            <div id="explorePostsFeed" class="posts-feed">
+              <!-- Dynamically populated by app.js -->
+            </div>
           </div>
         </div>
 

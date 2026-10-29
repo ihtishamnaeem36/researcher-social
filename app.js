@@ -719,6 +719,11 @@ function renderFeed() {
   }
 
   let filtered = activePool.filter(p => {
+    // Author filter
+    if (state.authorFilter) {
+      const qAuthor = state.authorFilter.toLowerCase();
+      if (!(p.authors || '').toLowerCase().includes(qAuthor)) return false;
+    }
     // Topic filter
     if (state.currentTopic !== 'all' && p.field !== state.currentTopic) return false;
     // Saved filter
@@ -740,7 +745,9 @@ function renderFeed() {
   const showingCount = Math.min(state.pageLimit, totalCount);
 
   if (viewText) {
-    if (state.showSavedOnly) {
+    if (state.authorFilter) {
+      viewText.textContent = `Author: ${state.authorFilter} (${totalCount} Folios)`;
+    } else if (state.showSavedOnly) {
       viewText.textContent = `Library: ${showingCount} of ${totalCount} Saved Folios`;
     } else if (state.feedMode === 'primer') {
       viewText.textContent = state.currentTopic !== 'all'
@@ -758,7 +765,13 @@ function renderFeed() {
   }
 
   if (filtered.length === 0) {
-    container.innerHTML = '';
+    const authorEmptyNotice = state.authorFilter ? `
+      <div class="author-filter-banner" style="margin-bottom: 1.5rem;">
+        <span>No folios found for <strong>${escapeHTML(state.authorFilter)}</strong></span>
+        <button onclick="clearAuthorFilter()">✕ Clear Filter</button>
+      </div>
+    ` : '';
+    container.innerHTML = authorEmptyNotice;
     emptyState.style.display = 'block';
     return;
   }
@@ -781,7 +794,14 @@ function renderFeed() {
     </div>
   `;
 
-  container.innerHTML = cardsHTML + loadMoreHTML;
+  const authorBannerHTML = state.authorFilter ? `
+    <div class="author-filter-banner">
+      <span>Viewing Folios by <strong>${escapeHTML(state.authorFilter)}</strong> (${totalCount})</span>
+      <button onclick="clearAuthorFilter()">✕ Clear Filter</button>
+    </div>
+  ` : '';
+
+  container.innerHTML = authorBannerHTML + cardsHTML + loadMoreHTML;
 
   // Attach carousel scroll listeners & buttons
   attachCarouselEvents();
@@ -1192,7 +1212,7 @@ function renderPostCard(post) {
           <div class="author-avatar ${isBook ? 'book-author-avatar' : ''}">${isBook ? '📖' : getInitials(post.authors)}</div>
           <div class="author-meta">
             <div class="author-name-line">
-              <span class="author-name">${escapeHTML(post.authors)}</span>
+              <span class="author-name" onclick="filterByAuthor('${escapeHTML(post.authors)}')" title="Filter folios by this author" style="cursor: pointer;">${escapeHTML(post.authors)}</span>
               <span class="author-dot">·</span>
               <span class="author-timestamp">${formatInstagramTime(post.createdAt)}</span>
             </div>
@@ -4602,15 +4622,20 @@ function saveScreenshot(dataUrl, filename, meta = {}) {
     }
   }
 
-  // 2. Standard Browser <a> download link
-  try {
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = dataUrl;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  } catch (e) {}
+  // 2. Standard Browser <a> download link (Desktop browsers only, NEVER inside native Android WebView)
+  if (!savedNatively && typeof window.FolerioNative === 'undefined') {
+    try {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (!isMobile) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (e) {}
+  }
 
   // 3. Open Screenshot Preview Modal for confirmation
   if (!meta.silentModal) {
@@ -4740,19 +4765,10 @@ function submitSheetComment() {
   const post = state.posts.find(p => p.id === currentSheetPostId) || state.primerPosts.find(p => p.id === currentSheetPostId);
   if (!post) return;
 
-  // If scholar is not logged in: auto-copy draft to device clipboard & prompt login
-  if (!state.currentUser) {
-    copyTextToClipboard(text);
-    sessionStorage.setItem('folerio_pending_comment_draft', text);
-    sessionStorage.setItem('folerio_pending_comment_post_id', currentSheetPostId);
-    closeCommentsBottomSheet();
-    openAuthModal('signin');
-    showToast('📋 Critique copied to clipboard! Please sign in to publish.', 'info');
-    return;
-  }
+  // Use verified account name if signed in, or allow seamless Visiting Scholar commentary
+  const authorName = (state.currentUser && state.currentUser.name) ? state.currentUser.name : 'Visiting Scholar';
 
   if (!post.comments) post.comments = [];
-  const authorName = state.currentUser ? state.currentUser.name : 'Peer Scholar';
   const newComment = {
     id: 'c-' + Date.now(),
     author: authorName,
@@ -4906,52 +4922,193 @@ function triggerTabRefreshAnimation() {
 }
 
 /* ==========================================================================
-   Dedicated Explore Search Filter
+   Dedicated Explore Search: Authors & Profiles First, Folios Second
    ========================================================================== */
+function getIndexedScholars() {
+  const map = new Map();
+
+  // 1. Peer Scholars Pool
+  if (typeof PEER_SCHOLARS_POOL !== 'undefined' && Array.isArray(PEER_SCHOLARS_POOL)) {
+    PEER_SCHOLARS_POOL.forEach(s => {
+      const key = s.name.toLowerCase().trim();
+      map.set(key, {
+        name: s.name,
+        title: s.title,
+        field: s.title.includes('·') ? s.title.split('·')[1].trim() : 'Frontier Research',
+        initials: s.initials || getInitials(s.name),
+        color: s.color || 'linear-gradient(135deg, #38bdf8, #818cf8)',
+        folioCount: 0
+      });
+    });
+  }
+
+  // 2. Authors from all loaded posts, primers, and book chapters
+  const allPosts = [
+    ...(state.posts || []),
+    ...(state.primerPosts || []),
+    ...(state.bookPosts || [])
+  ];
+
+  allPosts.forEach(p => {
+    if (!p.authors) return;
+    const authorName = p.authors.trim();
+    const key = authorName.toLowerCase();
+    const isBook = !!p.bookMeta;
+
+    if (map.has(key)) {
+      map.get(key).folioCount += 1;
+    } else {
+      map.set(key, {
+        name: authorName,
+        title: isBook ? `Author · ${p.bookMeta?.bookTitle || 'Academic Text'}` : `Investigator · ${p.field || 'Frontier Sciences'}`,
+        field: p.field || (isBook ? 'Curated Textbooks' : 'Frontier Research'),
+        initials: isBook ? '📖' : getInitials(authorName),
+        color: 'linear-gradient(135deg, #6366f1, #38bdf8)',
+        folioCount: 1
+      });
+    }
+  });
+
+  return Array.from(map.values());
+}
+
 function initExploreSearch() {
   const searchInput = document.getElementById('exploreSearchInput');
+  const clearBtn = document.getElementById('exploreSearchClearBtn');
+  const searchResults = document.getElementById('exploreSearchResults');
+  const defaultContent = document.getElementById('exploreDefaultContent');
+  const scholarsList = document.getElementById('exploreScholarsList');
+  const scholarsHeader = document.getElementById('exploreScholarsHeader');
+  const foliosList = document.getElementById('exploreFoliosList');
+  const foliosHeader = document.getElementById('exploreFoliosHeader');
+
   if (!searchInput) return;
 
   searchInput.addEventListener('input', (e) => {
     const query = e.target.value.toLowerCase().trim();
 
-    // 1. Filter Disciplines Grid
-    const cards = document.querySelectorAll('.discipline-matrix-card');
-    cards.forEach(card => {
-      const topicName = card.querySelector('.matrix-topic-name')?.textContent?.toLowerCase() || '';
-      card.style.display = topicName.includes(query) ? '' : 'none';
-    });
-
-    // 2. Filter Explore Unfollowed Posts Feed
-    const exploreContainer = document.getElementById('explorePostsFeed');
-    if (!exploreContainer) return;
-
     if (!query) {
+      if (clearBtn) clearBtn.style.display = 'none';
+      if (searchResults) searchResults.style.display = 'none';
+      if (defaultContent) defaultContent.style.display = 'block';
       renderExploreFeed();
       return;
     }
 
-    const matchedPosts = state.posts.filter(p => {
-      const matchTitle = (p.title || '').toLowerCase().includes(query);
-      const matchAuthors = (p.authors || '').toLowerCase().includes(query);
-      const matchField = (p.field || '').toLowerCase().includes(query);
-      return matchTitle || matchAuthors || matchField;
+    if (clearBtn) clearBtn.style.display = 'flex';
+    if (defaultContent) defaultContent.style.display = 'none';
+    if (searchResults) searchResults.style.display = 'block';
+
+    // 1. Search Scholars & Profiles FIRST
+    const allScholars = getIndexedScholars();
+    const matchingScholars = allScholars.filter(s => {
+      const nameMatch = (s.name || '').toLowerCase().includes(query);
+      const titleMatch = (s.title || '').toLowerCase().includes(query);
+      const fieldMatch = (s.field || '').toLowerCase().includes(query);
+      return nameMatch || titleMatch || fieldMatch;
     });
 
-    if (matchedPosts.length === 0) {
-      exploreContainer.innerHTML = `
-        <div class="empty-state" style="padding: 2.5rem 1rem;">
-          <div class="empty-icon">🔍</div>
-          <h3>No matching preprints found</h3>
-          <p>Try searching for a different keyword or research discipline.</p>
-        </div>
-      `;
-    } else {
-      exploreContainer.innerHTML = matchedPosts.slice(0, 15).map(post => renderPostCard(post)).join('');
-      attachCarouselEvents();
+    if (scholarsHeader) {
+      scholarsHeader.textContent = `Scholars & Authors (${matchingScholars.length})`;
+    }
+
+    if (scholarsList) {
+      if (matchingScholars.length === 0) {
+        scholarsList.innerHTML = `<div style="color:var(--text-muted);font-size:0.86rem;padding:0.75rem 0.25rem;">No authors or profiles matching "${escapeHTML(query)}". Showing matching folios below:</div>`;
+      } else {
+        scholarsList.innerHTML = matchingScholars.slice(0, 8).map(s => {
+          const isColleague = state.colleagues.has(s.name);
+          return `
+            <div class="scholar-profile-card">
+              <div class="scholar-card-left">
+                <div class="scholar-card-avatar" style="background: ${s.color};">${s.initials}</div>
+                <div class="scholar-card-info">
+                  <div class="scholar-card-name">
+                    <span>${escapeHTML(s.name)}</span>
+                    <span class="scholar-badge-icon" title="Verified Scholar">✓</span>
+                  </div>
+                  <div class="scholar-card-title">${escapeHTML(s.title)}</div>
+                  <div class="scholar-card-count">${s.folioCount} published folio${s.folioCount === 1 ? '' : 's'}</div>
+                </div>
+              </div>
+              <div class="scholar-card-actions">
+                <button class="btn-view-folios" onclick="filterByAuthor('${escapeHTML(s.name)}')">View Folios</button>
+                <button class="colleague-btn ${isColleague ? 'active' : ''}" onclick="toggleColleague(event, '${escapeHTML(s.name)}')">
+                  ${isColleague ? '✓ Connected' : '+ Colleague'}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 2. Search Breakthrough Folios SECOND
+    const allPosts = [
+      ...(state.posts || []),
+      ...(state.primerPosts || []),
+      ...(state.bookPosts || [])
+    ];
+
+    const seenIds = new Set();
+    const matchingPosts = allPosts.filter(p => {
+      if (seenIds.has(p.id)) return false;
+      seenIds.add(p.id);
+
+      const titleMatch = (p.title || '').toLowerCase().includes(query);
+      const authorsMatch = (p.authors || '').toLowerCase().includes(query);
+      const fieldMatch = (p.field || '').toLowerCase().includes(query);
+      const doiMatch = (p.doi || '').toLowerCase().includes(query);
+      const hookMatch = (p.slides?.[0]?.hook || '').toLowerCase().includes(query);
+      const bookMatch = (p.bookMeta?.bookTitle || '').toLowerCase().includes(query) || (p.bookMeta?.collectionTitle || '').toLowerCase().includes(query);
+
+      return titleMatch || authorsMatch || fieldMatch || doiMatch || hookMatch || bookMatch;
+    });
+
+    if (foliosHeader) {
+      foliosHeader.textContent = `Matching Breakthrough Folios (${matchingPosts.length})`;
+    }
+
+    if (foliosList) {
+      if (matchingPosts.length === 0) {
+        foliosList.innerHTML = `
+          <div class="empty-state" style="padding: 2.5rem 1rem;">
+            <div class="empty-icon">🔍</div>
+            <h3>No matching folios found</h3>
+            <p>Try searching for a different keyword, topic, or author.</p>
+          </div>
+        `;
+      } else {
+        foliosList.innerHTML = matchingPosts.slice(0, 25).map(post => renderPostCard(post)).join('');
+        attachCarouselEvents();
+      }
     }
   });
 }
+
+window.clearExploreSearch = function() {
+  const searchInput = document.getElementById('exploreSearchInput');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    searchInput.focus();
+  }
+};
+
+window.filterByAuthor = function(authorName) {
+  if (!authorName) return;
+  state.authorFilter = authorName.trim();
+  switchTab('feed');
+  renderFeed();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  showToast(`Filtering folios by: ${authorName}`);
+};
+
+window.clearAuthorFilter = function() {
+  state.authorFilter = null;
+  renderFeed();
+  showToast('Author filter cleared');
+};
 
 /* ==========================================================================
    Colleague & Scholar Notifications Center
