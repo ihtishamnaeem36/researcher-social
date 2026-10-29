@@ -318,11 +318,41 @@ const SupabaseBridge = {
         }
 
         // Fetch user metadata & upsert profile
-        const user = await this.fetchUser(accessToken);
+        let user = await this.fetchUser(accessToken);
+        if (!user) {
+          // Robust JWT fallback: decode user info directly from token without network latency
+          try {
+            const payloadPart = accessToken.split('.')[1];
+            if (payloadPart) {
+              const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+              const jsonStr = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+              const payload = JSON.parse(jsonStr);
+              if (payload && (payload.sub || payload.email)) {
+                user = {
+                  id: payload.sub || ('scholar-' + Date.now().toString(36)),
+                  email: payload.email || '',
+                  user_metadata: payload.user_metadata || {
+                    name: payload.name || payload.email?.split('@')[0] || 'Scholar',
+                    full_name: payload.name || payload.email?.split('@')[0] || 'Scholar',
+                    avatar_url: payload.picture || ''
+                  }
+                };
+              }
+            }
+          } catch (jwtErr) {
+            console.warn('JWT decode fallback failed:', jwtErr);
+          }
+        }
+
         if (user) {
           session.user = user;
           this.saveSession(session);
-          const profile = await this.syncProfile(user);
+          let profile = {};
+          try {
+            profile = await this.syncProfile(user);
+          } catch (pErr) {
+            profile = {};
+          }
           const formatted = this.formatScholarUser(user, profile);
 
           if (typeof window.signInUser === 'function') {
@@ -594,4 +624,9 @@ const SupabaseBridge = {
     }
   }
 };
+
+// Expose globally on window so Native Android Bridge and external scripts can always access it
+if (typeof window !== 'undefined') {
+  window.SupabaseBridge = SupabaseBridge;
+}
 

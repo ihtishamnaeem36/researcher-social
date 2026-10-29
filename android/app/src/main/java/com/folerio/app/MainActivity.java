@@ -72,9 +72,17 @@ public class MainActivity extends BridgeActivity {
                     }
 
                     if (fragment != null && !fragment.isEmpty()) {
-                        webView.evaluateJavascript("window.location.hash = '" + fragment.replace("'", "\\'") + "'; if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect(); }", null);
+                        try {
+                            String b64 = Base64.encodeToString(fragment.getBytes("UTF-8"), Base64.NO_WRAP);
+                            String js = "(function() { try { var f = decodeURIComponent(escape(window.atob('" + b64 + "'))); if (typeof window.handleNativeAuthFragment === 'function') { window.handleNativeAuthFragment(f); } else if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect(f); } } catch(e) {} })()";
+                            webView.evaluateJavascript(js, null);
+                        } catch (Exception ignored) {}
                     } else if (query != null && (query.contains("access_token") || query.contains("code=") || query.contains("error="))) {
-                        webView.evaluateJavascript("if (window.SupabaseBridge) { SupabaseBridge.handleAuthQuery('" + query.replace("'", "\\'") + "'); }", null);
+                        try {
+                            String b64 = Base64.encodeToString(query.getBytes("UTF-8"), Base64.NO_WRAP);
+                            String js = "(function() { try { var q = decodeURIComponent(escape(window.atob('" + b64 + "'))); if (typeof window.handleNativeAuthQuery === 'function') { window.handleNativeAuthQuery(q); } else if (window.SupabaseBridge) { SupabaseBridge.handleAuthQuery(q); } } catch(e) {} })()";
+                            webView.evaluateJavascript(js, null);
+                        } catch (Exception ignored) {}
                     }
                     // NEVER call webView.loadUrl() with remote or localhost:3000 URLs, keep app 100% on local offline assets
                 }
@@ -309,9 +317,17 @@ public class MainActivity extends BridgeActivity {
                                     WebView mainWeb = getBridge() != null ? getBridge().getWebView() : null;
                                     if (mainWeb != null) {
                                         if (finalFrag != null && !finalFrag.isEmpty()) {
-                                            mainWeb.evaluateJavascript("if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect('" + finalFrag.replace("'", "\\'") + "'); }", null);
+                                            try {
+                                                String b64 = Base64.encodeToString(finalFrag.getBytes("UTF-8"), Base64.NO_WRAP);
+                                                String js = "(function() { try { var f = decodeURIComponent(escape(window.atob('" + b64 + "'))); if (typeof window.handleNativeAuthFragment === 'function') { window.handleNativeAuthFragment(f); } else if (window.SupabaseBridge) { SupabaseBridge.handleAuthRedirect(f); } } catch(e) { console.error('Folerio Auth Eval Error:', e); } })()";
+                                                mainWeb.evaluateJavascript(js, null);
+                                            } catch (Exception ignored) {}
                                         } else if (finalQuery != null && !finalQuery.isEmpty()) {
-                                            mainWeb.evaluateJavascript("if (window.SupabaseBridge) { SupabaseBridge.handleAuthQuery('" + finalQuery.replace("'", "\\'") + "'); }", null);
+                                            try {
+                                                String b64 = Base64.encodeToString(finalQuery.getBytes("UTF-8"), Base64.NO_WRAP);
+                                                String js = "(function() { try { var q = decodeURIComponent(escape(window.atob('" + b64 + "'))); if (typeof window.handleNativeAuthQuery === 'function') { window.handleNativeAuthQuery(q); } else if (window.SupabaseBridge) { SupabaseBridge.handleAuthQuery(q); } } catch(e) { console.error('Folerio Auth Query Eval Error:', e); } })()";
+                                                mainWeb.evaluateJavascript(js, null);
+                                            } catch (Exception ignored) {}
                                         }
                                     }
                                 }

@@ -3607,6 +3607,44 @@ window.onInAppAuthClosed = function() {
   }
 };
 
+window.handleNativeAuthFragment = async function(fragmentStr) {
+  try {
+    const alertBox = document.getElementById('authAlertBox');
+    if (alertBox) {
+      alertBox.className = 'auth-alert-box';
+      alertBox.style.display = 'block';
+      alertBox.innerHTML = '⚡ Verifying Scholar Credentials...';
+    }
+    const bridge = window.SupabaseBridge || SupabaseBridge;
+    if (bridge && typeof bridge.handleAuthRedirect === 'function') {
+      const user = await bridge.handleAuthRedirect(fragmentStr);
+      if (user) {
+        closeAuthModal();
+        return user;
+      }
+    }
+  } catch (err) {
+    console.error('handleNativeAuthFragment error:', err);
+  }
+  return null;
+};
+
+window.handleNativeAuthQuery = async function(queryStr) {
+  try {
+    const bridge = window.SupabaseBridge || SupabaseBridge;
+    if (bridge && typeof bridge.handleAuthQuery === 'function') {
+      const user = await bridge.handleAuthQuery(queryStr);
+      if (user) {
+        closeAuthModal();
+        return user;
+      }
+    }
+  } catch (err) {
+    console.error('handleNativeAuthQuery error:', err);
+  }
+  return null;
+};
+
 async function signOutScholar() {
   await SupabaseBridge.signOut();
   state.currentUser = null;

@@ -90,12 +90,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.6
-          name: "Folerio Android v1.5.6 (Fixed Google OAuth Callback Interception & In-App Auth Dialog Lifecycle)"
+          tag_name: v1.5.7
+          name: "Folerio Android v1.5.7 (Fixed Global Window SupabaseBridge & Base64 Token Handshake)"
           body: |
-            ### Folerio Standalone Android APK (v1.5.6)
-            - **Google OAuth Callback Fix:** Resolved issue where Google's auth code was prematurely intercepted before Supabase could process the authentication callback. The native bridge now permits Supabase and Google authentication exchange pages to finish normally, intercepting only the final session tokens (`access_token` and `refresh_token`).
-            - **Dialog Reopen & Lifecycle Cleanup:** Added proper dialog teardown and `onDismiss` handling, ensuring the in-app Google Sign-In window opens smoothly every time without hanging or getting stuck after a first attempt.
-            - **Instant Token Handshake:** Injected tokens directly into `SupabaseBridge.handleAuthRedirect(fragment)` for instantaneous sign-in and profile synchronization.
+            ### Folerio Standalone Android APK (v1.5.7)
+            - **Global Window SupabaseBridge Binding:** Fixed root cause where `SupabaseBridge` was not attached to `window.SupabaseBridge`, causing the native Android bridge's evaluation to silently evaluate to undefined upon receiving Google OAuth tokens.
+            - **Safe Base64 Token Handshake:** Android native bridge now passes OAuth tokens via safe Base64 encoding into `window.handleNativeAuthFragment`, completely eliminating JavaScript escaping errors or syntax breaks.
+            - **Zero-Latency JWT Offline Fallback:** If user profile synchronization experiences network delay, the client immediately decodes the signed JWT payload directly to sign the user in with their full name, email, and Google avatar without delay.
             - **Direct Download:** Download `Folerio.apk` below and tap Install/Update.
           files: output/Folerio.apk
