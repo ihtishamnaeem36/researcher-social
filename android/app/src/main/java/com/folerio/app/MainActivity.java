@@ -296,7 +296,25 @@ public class MainActivity extends BridgeActivity {
             authWebView.loadUrl(authUrl);
         } catch (Exception e) {
             e.printStackTrace();
-            openExternalUrl(authUrl);
+            launchExternalBrowser(authUrl);
+        }
+    }
+
+    private void launchExternalBrowser(String url) {
+        try {
+            String cleanUrl = url;
+            if (cleanUrl != null) {
+                if (cleanUrl.startsWith("http://arxiv.org/")) {
+                    cleanUrl = cleanUrl.replace("http://arxiv.org/", "https://arxiv.org/");
+                } else if (cleanUrl.startsWith("http://doi.org/")) {
+                    cleanUrl = cleanUrl.replace("http://doi.org/", "https://doi.org/");
+                }
+            }
+            android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(cleanUrl));
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -326,21 +344,7 @@ public class MainActivity extends BridgeActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        String cleanUrl = url;
-                        if (cleanUrl != null) {
-                            if (cleanUrl.startsWith("http://arxiv.org/")) {
-                                cleanUrl = cleanUrl.replace("http://arxiv.org/", "https://arxiv.org/");
-                            } else if (cleanUrl.startsWith("http://doi.org/")) {
-                                cleanUrl = cleanUrl.replace("http://doi.org/", "https://doi.org/");
-                            }
-                        }
-                        android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(cleanUrl));
-                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    launchExternalBrowser(url);
                 }
             });
         }
