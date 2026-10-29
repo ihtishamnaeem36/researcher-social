@@ -4,9 +4,12 @@
   "description": "> A visual micro-publishing platform designed specifically for researchers, academics, and science enthusiasts. Turn dense, 20-page papers into elegant, bite-sized horizontal carousels with deep-dive technical slides.",
   "main": "app.js",
   "scripts": {
-    "copy-assets": "mkdir -p www && cp index.html app.js cache-manager.js card-generator.js html2canvas.min.js styles.css papers-data.json primer-data.json books-data.json supabase-client.js www/",
-    "sync": "npm run copy-assets && npx cap sync android",
-    "open:android": "npx cap open android"
+    "copy-assets": "mkdir -p www && cp index.html app.js cache-manager.js card-generator.js html2canvas.min.js styles.css papers-data.json primer-data.json books-data.json supabase-client.js manifest.json icon-192.png icon-512.png www/",
+    "sync": "npm run copy-assets && npx cap sync",
+    "sync:android": "npm run copy-assets && npx cap sync android",
+    "sync:ios": "npm run copy-assets && npx cap sync ios",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios"
   },
   "repository": {
     "type": "git",
@@ -22,6 +25,7 @@
   "dependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/cli": "^8.5.3",
-    "@capacitor/core": "^8.5.3"
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.6.0"
   }
 }

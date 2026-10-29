@@ -429,21 +429,69 @@ const SupabaseBridge = {
   },
 
   /**
+   * Refresh session tokens using Supabase refresh_token
+   */
+  async refreshSession() {
+    const session = this.getSession();
+    if (!session || !session.refresh_token || !this.config.isConnected) return null;
+
+    try {
+      const res = await fetch(`${this.config.url}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: {
+          'apikey': this.config.anonKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      });
+      if (res.ok) {
+        const fresh = await res.json();
+        const updatedSession = {
+          ...session,
+          ...fresh,
+          user: fresh.user || session.user
+        };
+        this.saveSession(updatedSession);
+        return updatedSession;
+      }
+    } catch (e) {
+      console.warn('Refresh session network notice:', e);
+    }
+    return null;
+  },
+
+  /**
    * Check currently logged in user session on startup
    */
   async getCurrentUser() {
     const session = this.getSession();
     if (!session || !session.access_token) return null;
 
-    // Validate with Supabase
-    const user = await this.fetchUser(session.access_token);
+    // 1. Try validating token with Supabase
+    let user = await this.fetchUser(session.access_token);
+
+    // 2. If token expired, try automatic refresh with refresh_token
+    if (!user && session.refresh_token) {
+      const refreshed = await this.refreshSession();
+      if (refreshed && refreshed.access_token) {
+        user = refreshed.user || (await this.fetchUser(refreshed.access_token));
+      }
+    }
+
     if (user) {
       const profile = await this.syncProfile(user);
       return this.formatScholarUser(user, profile);
     }
 
-    // If token expired, clear session
-    this.clearSession();
+    // 3. Offline resilience: If device is offline or network is down, preserve existing scholar session
+    if (typeof navigator !== 'undefined' && !navigator.onLine && session.user) {
+      return this.formatScholarUser(session.user);
+    }
+
+    // Only clear if token is definitively expired AND refresh failed AND user is confirmed online
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      this.clearSession();
+    }
     return null;
   },
 
