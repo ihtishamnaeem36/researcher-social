@@ -333,10 +333,6 @@
             <span class="topbar-notif-badge" id="notificationsBadge">3</span>
           </button>
 
-          <button class="topbar-icon-btn reading-theme-trigger-btn" id="topbarThemeMatrixBtn" onclick="openThemeMatrixModal()" aria-label="Reading &amp; Theme Matrix" title="Reading &amp; Theme Matrix">
-            <span class="reading-theme-icon" id="topbarThemeIcon">🎨</span>
-          </button>
-
           <button class="topbar-icon-btn topbar-account-btn" id="topbarAccountBtn" aria-label="Scholar Account & Settings" title="Scholar Account & Settings">
             <span class="topbar-account-avatar" id="topbarAccountAvatar">🎓</span>
           </button>
@@ -995,6 +991,14 @@
           </select>
         </div>
 
+        <div class="settings-section">
+          <label class="settings-label">Reading &amp; Display Theme</label>
+          <p class="settings-hint">Choose your preferred contrast mode for app navigation and academic folios.</p>
+          <button type="button" class="btn btn-outline btn-block" onclick="openThemeMatrixModal()" style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-top:0.4rem; padding:0.6rem 1rem;">
+            <span>Configure 4-Way Reading Theme Matrix</span>
+          </button>
+        </div>
+
         <div class="settings-actions-row">
           <button class="btn btn-outline" id="syncFreshCacheBtn">🔄 Sync Fresh Folios</button>
           <button class="btn btn-danger-outline" id="clearCacheBtn">🗑️ Clear Offline Cache</button>
@@ -1193,12 +1197,8 @@
         </svg>
       </button>
     </div>
-    <div class="book-sequence-guide">
-      <span class="book-guide-text">Sequential topics in this chapter collection:</span>
-      <span class="book-guide-count" id="bookSequenceCount">3 Topics</span>
-    </div>
     <div class="book-sequence-list" id="bookSequenceList">
-      <!-- Populated dynamically with sequence topic items (no numbering, ultra-clean) -->
+      <!-- Populated dynamically with sequence topic items on iOS grouped platter -->
     </div>
   </div>
 

@@ -1073,8 +1073,6 @@ function renderPostCard(post) {
   const isSaved = state.savedPostIds.has(post.id);
   const slideCount = post.slides.length;
   const isBook = Boolean(post.isBookFolio && post.bookMeta);
-  const authorGi = calculateScholarGiScore(post.authors);
-  const accountAgeBadge = formatAccountAge(post.createdAt);
 
   const slidesHTML = post.slides.map((s, idx) => {
     if (idx === 0) {
@@ -1082,28 +1080,21 @@ function renderPostCard(post) {
         return `
           <div class="post-slide slide-type-hero slide-type-book" data-index="${idx}">
             <div class="slide-badge-row">
-              <span class="slide-label book-badge-label">📖 Book Chapter Excerpt</span>
-              <span class="post-tag book-tag">📖 ${escapeHTML(post.field)}</span>
-            </div>
-            <div class="book-two-tier-header">
-              <!-- Tier 1: Clickable Broad Topic Heading (Opens Sequence Panel) -->
-              <button type="button" class="book-main-topic-btn" onclick="openBookSequenceDrawer('${post.id}')" title="Click to browse chapter sequence in order">
-                <span class="book-main-topic-icon">📖</span>
-                <div class="book-main-topic-text-group">
-                  <span class="book-main-topic-eyebrow">Book Collection · Tap to browse chapter</span>
-                  <span class="book-main-topic-title">${escapeHTML(post.bookMeta.collectionTitle || post.bookMeta.chapterTitle || 'Chapter Collection')}</span>
-                </div>
-                <span class="book-main-topic-action">Sequence ▾</span>
+              <span class="slide-label">${escapeHTML(post.bookMeta.chapter || 'Chapter')}</span>
+              <button type="button" class="book-sequence-pill-btn" onclick="openBookSequenceDrawer('${post.id}')" title="Chapter Sequence">
+                <span>Sequence</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
-
-              <!-- Tier 2: Specific Subtopic Title -->
+              <span class="post-tag">${escapeHTML(post.field)}</span>
+            </div>
+            <div class="book-hero-body">
+              ${post.bookMeta.collectionTitle ? `<div class="book-collection-header-text">${escapeHTML(post.bookMeta.collectionTitle)}</div>` : ''}
               <h2 class="paper-hero-title book-hero-title">${escapeHTML(post.title)}</h2>
               <div class="breakthrough-hook book-hook">"${escapeHTML(s.hook)}"</div>
             </div>
             <div class="slide-footer-row book-footer-row">
               <div class="book-bottom-citation">
-                <span class="book-citation-icon">📚</span>
-                <span class="book-citation-text">${escapeHTML(post.bookMeta.bookTitle)}${post.bookMeta.edition ? ' (' + escapeHTML(post.bookMeta.edition) + ')' : ''} &bull; ${escapeHTML(post.bookMeta.chapter)} ${escapeHTML(post.bookMeta.chapterTitle || '')}</span>
+                <span class="book-citation-text">${escapeHTML(post.bookMeta.bookTitle)}${post.bookMeta.edition ? ' (' + escapeHTML(post.bookMeta.edition) + ')' : ''} &bull; ${escapeHTML(post.bookMeta.chapter || '')}</span>
               </div>
             </div>
           </div>
@@ -1112,15 +1103,15 @@ function renderPostCard(post) {
       return `
         <div class="post-slide slide-type-hero" data-index="${idx}">
           <div class="slide-badge-row">
-            <span class="slide-label">${post.isPrimer ? '🌱 Foundation & Core Principles' : '● Core Thesis & Breakthrough'}</span>
-            <span class="post-tag ${post.isPrimer ? 'primer-badge' : ''}">${post.isPrimer ? '🌱 ' + post.field : post.field}</span>
+            <span class="slide-label">${post.isPrimer ? '● Foundation' : '● Breakthrough'}</span>
+            <span class="post-tag ${post.isPrimer ? 'primer-badge' : ''}">${escapeHTML(post.field)}</span>
           </div>
           <div>
-            <h2 class="paper-hero-title">${post.title}</h2>
-            <div class="breakthrough-hook">"${s.hook}"</div>
+            <h2 class="paper-hero-title">${escapeHTML(post.title)}</h2>
+            <div class="breakthrough-hook">"${escapeHTML(s.hook)}"</div>
           </div>
           <div class="slide-footer-row">
-            <span class="paper-authors-tag">${post.authors}</span>
+            <span class="paper-authors-tag">${escapeHTML(post.authors)}</span>
           </div>
         </div>
       `;
@@ -1130,13 +1121,9 @@ function renderPostCard(post) {
           <div class="post-slide slide-type-dive slide-type-book" data-index="${idx}">
             <div class="slide-badge-row">
               <span class="dive-section-tag book-dive-tag">${escapeHTML(s.title || '[Book Excerpt]')}</span>
-              <span class="post-tag book-tag">📖 ${escapeHTML(post.field)}</span>
+              <span class="post-tag">${escapeHTML(post.field)}</span>
             </div>
             <div class="book-dive-body">
-              <button type="button" class="book-dive-compact-topic" onclick="openBookSequenceDrawer('${post.id}')" title="Chapter Sequence">
-                <span>📖 ${escapeHTML(post.bookMeta.collectionTitle || post.bookMeta.bookTitle)}</span>
-                <span class="book-chevron-mini">▾</span>
-              </button>
               <h3 class="dive-heading book-dive-heading">${escapeHTML(s.title || 'In-Depth Excerpt')}</h3>
               <div class="dive-content book-dive-content">
                 <p>${escapeHTML(s.content)}</p>
@@ -1144,26 +1131,25 @@ function renderPostCard(post) {
             </div>
             <div class="slide-footer-row book-footer-row">
               <div class="book-bottom-citation">
-                <span class="book-citation-icon">📚</span>
-                <span class="book-citation-text">${escapeHTML(post.bookMeta.bookTitle)}${post.bookMeta.edition ? ' (' + escapeHTML(post.bookMeta.edition) + ')' : ''} &bull; ${escapeHTML(post.bookMeta.chapter)}</span>
+                <span class="book-citation-text">${escapeHTML(post.bookMeta.bookTitle)} &bull; ${escapeHTML(post.bookMeta.chapter || '')}</span>
               </div>
             </div>
           </div>
         `;
       }
       const stepTags = post.isPrimer
-        ? ['[01] Core Concept', '[02] First Principles', '[03] Mechanism & Step-by-Step', '[04] Modern Applications']
-        : ['[01] Thesis', '[02] Methodology & Specs', '[03] Quantitative Evidence', '[04] Critical Frontier'];
+        ? ['[01] Core Concept', '[02] First Principles', '[03] Mechanism', '[04] Applications']
+        : ['[01] Thesis', '[02] Methodology', '[03] Evidence', '[04] Frontier'];
       return `
         <div class="post-slide slide-type-dive" data-index="${idx}">
           <div class="slide-badge-row">
             <span class="dive-section-tag">${stepTags[idx] || '[Deep Dive]'}</span>
-            <span class="post-tag ${post.isPrimer ? 'primer-badge' : ''}">${post.isPrimer ? '🌱 ' + post.field : post.field}</span>
+            <span class="post-tag ${post.isPrimer ? 'primer-badge' : ''}">${escapeHTML(post.field)}</span>
           </div>
           <div>
-            <h3 class="dive-heading">${s.title || 'In-Depth Breakdown'}</h3>
+            <h3 class="dive-heading">${escapeHTML(s.title || 'In-Depth Breakdown')}</h3>
             <div class="dive-content">
-              <p>${s.content}</p>
+              <p>${escapeHTML(s.content)}</p>
             </div>
           </div>
           <div class="slide-footer-row">
@@ -1200,21 +1186,21 @@ function renderPostCard(post) {
 
   return `
     <article class="post-card-wrapper ${isBook ? 'book-card-theme' : ''}" id="post-${post.id}">
-      <!-- Author & Header Row (Clean, single follow button on right) -->
+      <!-- Author & Header Row (Instagram style: Real author · Relative time) -->
       <header class="post-header ${isBook ? 'book-post-header' : ''}">
         <div class="author-info">
           <div class="author-avatar ${isBook ? 'book-author-avatar' : ''}">${isBook ? '📖' : getInitials(post.authors)}</div>
           <div class="author-meta">
             <div class="author-name-line">
               <span class="author-name">${escapeHTML(post.authors)}</span>
-              <button type="button" class="author-gi-chip" onclick="openGiAnalyticsModal('${escapeHTML(post.authors)}')" title="Global Impact Score — Tap to inspect impact breakdown">⚡ GI ${authorGi.total.toLocaleString()}</button>
-              <span class="author-age-tag" title="Scholar Account Age">${accountAgeBadge}</span>
+              <span class="author-dot">·</span>
+              <span class="author-timestamp">${formatInstagramTime(post.createdAt)}</span>
             </div>
-            <span class="author-sub">${isBook ? '📖 ' + escapeHTML(post.bookMeta.bookTitle) : formatDate(post.createdAt)}</span>
+            ${isBook ? `<span class="author-sub">${escapeHTML(post.bookMeta.bookTitle)}</span>` : ''}
           </div>
         </div>
         <button class="colleague-btn ${isColleague ? 'active' : ''}" onclick="toggleColleague(event, '${escapeHTML(post.authors)}')" title="Connect with Colleague">
-          ${isColleague ? '✓ Colleagues' : '+ Colleague'}
+          ${isColleague ? '✓ Connected' : '+ Colleague'}
         </button>
       </header>
 
@@ -3039,6 +3025,33 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function formatInstagramTime(iso) {
+  if (!iso) return 'today';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return 'today';
+
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  if (diffMs < 0) return 'today';
+
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffHours < 1) return 'just now';
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`;
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()];
+  const day = d.getDate();
+  if (d.getFullYear() === now.getFullYear()) {
+    return `${day} ${month}`;
+  }
+  return `${day} ${month} ${d.getFullYear()}`;
+}
+
 /* ==========================================================================
    View Router (Feed, Explore, Profile)
    ========================================================================== */
@@ -4241,29 +4254,34 @@ function openBookSequenceDrawer(postId) {
   const countEl = document.getElementById('bookSequenceCount');
   const listEl = document.getElementById('bookSequenceList');
 
-  if (bookTitleEl) bookTitleEl.textContent = meta.bookTitle || 'Book Chapter Sequence';
-  if (editionEl) editionEl.textContent = meta.edition || 'Textbook Edition';
-  if (chapterEl) chapterEl.textContent = `${meta.chapter || ''} ${meta.chapterTitle ? '· ' + meta.chapterTitle : ''}`;
-  if (mainTopicEl) mainTopicEl.textContent = meta.collectionTitle || currentPost.title;
+  if (bookTitleEl) bookTitleEl.textContent = `${meta.bookTitle || 'Textbook'}${meta.edition ? ' (' + meta.edition + ')' : ''}`;
+  if (editionEl) editionEl.textContent = meta.edition || '7th Edition';
+  if (chapterEl) chapterEl.textContent = meta.chapter || 'Chapter';
+  if (mainTopicEl) mainTopicEl.textContent = meta.collectionTitle || meta.chapterTitle || currentPost.title;
   if (countEl) countEl.textContent = `${siblings.length} Topics in Sequence`;
 
   if (listEl) {
-    listEl.innerHTML = siblings.map(sib => {
-      const isCurrent = sib.id === currentPost.id;
-      return `
-        <div class="book-sequence-item ${isCurrent ? 'active-reading' : ''}" onclick="selectBookSequenceTopic('${sib.id}')" role="button" tabindex="0">
-          <div class="sequence-bullet-col">
-            <span class="sequence-node ${isCurrent ? 'current-node' : ''}"></span>
-          </div>
-          <div class="sequence-item-content">
-            <div class="sequence-topic-title">${escapeHTML(sib.title)}</div>
-            <div class="sequence-topic-meta">
-              ${isCurrent ? '<span class="sequence-current-badge">● Currently Reading</span>' : '<span class="sequence-read-action">Read Topic &rarr;</span>'}
+    listEl.innerHTML = `
+      <div class="book-sequence-platter">
+        ${siblings.map((sib, sIdx) => {
+          const isCurrent = sib.id === currentPost.id;
+          const sectionNum = sib.bookMeta.section || `${meta.chapter || '11.2'}.${sIdx + 1}`;
+          const snippet = sib.slides && sib.slides[0] ? sib.slides[0].hook || '' : '';
+          return `
+            <div class="book-sequence-row ${isCurrent ? 'active-reading' : ''}" onclick="selectBookSequenceTopic('${sib.id}')" role="button" tabindex="0">
+              <div class="sequence-row-main">
+                <span class="sequence-row-eyebrow">${escapeHTML(sectionNum)} · Topic ${sIdx + 1}</span>
+                <span class="sequence-row-title">${escapeHTML(sib.title)}</span>
+                ${snippet ? `<span class="sequence-row-desc">${escapeHTML(snippet)}</span>` : ''}
+              </div>
+              <div class="sequence-row-accessory">
+                ${isCurrent ? '<span class="sequence-current-pill">Reading</span>' : '<span class="sequence-chevron">›</span>'}
+              </div>
             </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+          `;
+        }).join('')}
+      </div>
+    `;
   }
 
   if (backdrop) backdrop.classList.add('visible');

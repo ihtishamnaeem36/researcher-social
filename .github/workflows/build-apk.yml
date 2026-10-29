@@ -90,13 +90,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.5.4
-          name: "Folerio Android v1.5.4 (In-App Google Account Chooser & Auth Localhost Fix)"
+          tag_name: v1.5.5
+          name: "Folerio Android v1.5.5 (Instagram Timestamps, iOS Grouped Platter, Decluttered Feed)"
           body: |
-            ### Folerio Standalone Android APK (v1.5.4)
-            - **In-App Google Sign-In & Account Chooser (No External Browser):** Implemented a native in-app authentication dialog directly within Folerio. When you tap "Continue with Google", the Google account chooser opens right inside the app, lets you pick your account, and closes automatically upon completion.
-            - **Eliminated "localhost refused to connect" Redirects:** The in-app auth bridge intercepts all redirect URLs (including any default Supabase `localhost:3000` redirects) *before* the browser attempts network connection, extracting tokens and logging you in immediately.
-            - **Instant 1-Tap Verified Scholar Pass:** Added a 1-tap instant scholar pass in the authentication modal for seamless zero-friction access.
-            - **100% Offline Independent Standalone APK:** Bundled with all local assets, book collections, theme matrix, and global impact analytics.
+            ### Folerio Standalone Android APK (v1.5.5)
+            - **Privacy & Data Honesty (Zero Fake Signals):** Completely removed invented account age and feed-card GI score badges. All author cards in the feed now exclusively show the author name and clean, authentic relative timestamps (`just now`, `2h`, `yesterday`, `3d`, `12 Oct`), matching Instagram's human-readable format.
+            - **Profile-Bound Career Signals:** GI score, publications, and career metrics are relocated strictly to the User Profile view, keeping the feed quiet and focused on research content.
+            - **Apple iOS-Style Grouped Platter for Book Sequences:** Transformed book sequences into a unified rounded platter with hairline dividers, quiet sequence indicators, and clean reading topic previews instead of separate blocks.
+            - **Eliminated Repetitive Collection Headers:** Book reading slides (slides 1, 2, and 3) now provide an unobstructed, clean reading canvas with all redundant top banners removed.
+            - **Moved Theme & Display Matrix to Settings:** Removed visual clutter from the main topbar; reading themes and cache settings are cleanly consolidated inside the Settings modal.
             - **Direct Download:** Download `Folerio.apk` below and tap Install/Update.
           files: output/Folerio.apk
